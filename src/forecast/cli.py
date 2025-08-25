@@ -137,11 +137,14 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
             "Projekt": r.name,
             "Zeitraum": f"{r.period_start}–{r.period_end}",
             "Tage": r.workdays,
+            "Kapazität (h)": r.assigned_capacity_hours,
+            "ØKap/Tag": r.assigned_avg_per_day,
             "Øh/Tag 100%": r.required_per_day_100,
             "Øh/Tag 90%": r.required_per_day_90,
             "Øh/Tag 80%": r.required_per_day_80,
-            "ØKap/Tag": r.assigned_avg_per_day,
             "Util 100%": r.utilization_100,
+            "Util 90%": r.utilization_90,
+            "Util 80%": r.utilization_80,
             "Umsatz 100%": r.revenue_100,
             "Umsatz 90%": r.revenue_90,
             "Umsatz 80%": r.revenue_80,
@@ -215,7 +218,7 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Forecast-Planer (CLI)")
-    parser.add_argument("--config", required=True, help="Pfad zur config.yml")
+    parser.add_argument("--config", required=False, help="Pfad zur config.yml (Default: config/config.yml)")
     parser.add_argument("--output", help="Pfad für Exportdatei (überschreibt --outdir)")
     parser.add_argument("--export", choices=["csv"], help="Exportformat (ignoriert, CSV ist Standard)")
     parser.add_argument("--as-of", dest="as_of", help="Stichtag (YYYY-MM-DD)")
