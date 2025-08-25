@@ -7,11 +7,18 @@ import os
 import yaml
 
 
-def _parse_date(s: str, field_name: str) -> date:
-    try:
-        return datetime.strptime(s, "%Y-%m-%d").date()
-    except Exception as e:
-        raise ValueError(f"Ungültiges Datum für {field_name}: {s} (erwartet YYYY-MM-DD)") from e
+def _parse_date(s, field_name: str) -> date:
+    """Accept str (YYYY-MM-DD), datetime, or date from YAML and return date."""
+    if isinstance(s, date) and not isinstance(s, datetime):
+        return s
+    if isinstance(s, datetime):
+        return s.date()
+    if isinstance(s, str):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d").date()
+        except Exception as e:
+            raise ValueError(f"Ungültiges Datum für {field_name}: {s} (erwartet YYYY-MM-DD)") from e
+    raise ValueError(f"Ungültiger Typ für {field_name}: {type(s).__name__}")
 
 
 def _parse_month(s: str, field_name: str) -> str:
@@ -199,4 +206,3 @@ def load_config(path: str) -> Config:
     except Exception:
         # Re-raise with context
         raise
-
