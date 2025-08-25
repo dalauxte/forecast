@@ -1,6 +1,14 @@
 # Python venv
 .venv/
 
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+
 # Output artifacts (keep placeholder)
 output/*
 !output/.gitkeep
@@ -11,3 +19,5 @@ config/*
 
 # OS files
 .DS_Store
+.idea/
+.vscode/
