@@ -32,6 +32,17 @@ except Exception as e:
     raise
 PY
 
+# Quick check for runtime deps
+PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH+:$PYTHONPATH}" $PY - <<'PY'
+try:
+    import yaml, holidays, tabulate  # type: ignore
+    print('[smoke] deps: PyYAML, holidays, tabulate: OK')
+except Exception as e:
+    print('[smoke] deps missing:', e)
+    print('        Tipp: make deps  (oder: make install)')
+    raise SystemExit(1)
+PY
+
 echo "[smoke] Running CLI (module)..."
 set -o pipefail
 if ! PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH+:$PYTHONPATH}" $PY -m forecast.cli --config "$CONFIG_PATH" --export csv | head -n 20; then

@@ -1,4 +1,4 @@
-.PHONY: smoke venv install
+.PHONY: smoke venv install deps
 
 smoke:
 	@bash scripts/smoke.sh
@@ -10,3 +10,7 @@ venv:
 install:
 	@python -m pip install --upgrade pip
 	@python -m pip install -e .
+
+deps:
+	@python -m pip install --upgrade pip
+	@python -m pip install PyYAML holidays tabulate

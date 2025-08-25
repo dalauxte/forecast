@@ -3,7 +3,7 @@ name = "forecast-planner"
 version = "0.1.0"
 description = "CLI-Tool für Stunden- und Umsatz-Forecast je Projekt"
 requires-python = ">=3.11"
-authors = [{name = "Daniel L.", email = ""}]
+authors = [{name = "Daniel L."}]
 readme = "README.md"
 license = {text = "Proprietary"}
 dependencies = [
