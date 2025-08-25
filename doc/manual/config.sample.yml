@@ -1,0 +1,51 @@
+settings:
+  state: NI
+  planning_period:
+    start: 2025-03-01
+    end: 2025-04-30
+  round_hours: 0.15
+  locale: de-DE
+
+capacity:
+  per_weekday: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8 }
+  interval_overrides:
+    - { start: 2025-03-12, end: 2025-03-12, hours_per_day: 6 }   # Einzeltag mit geringerer Kapazität
+    - { start: 2025-04-01, end: 2025-04-05, hours_per_day: 4 }   # Woche mit geringerer Kapazität
+
+calendar:
+  vacation_days:
+    - 2025-03-28
+    - 2025-04-18
+  holiday_overrides:
+    add: []
+    remove: []
+
+sickness:
+  prob_per_workday: 0.02   # 2% Ausfallwahrscheinlichkeit je Arbeitstag
+
+projects:
+  - name: Projekt A
+    start: 2025-02-15
+    end: 2025-06-30
+    rest_budget_hours: 120
+    rate_eur_per_h: 120.0
+    weights_by_month:
+      "2025-03": 60     # 60% der Monatskapazität im März
+      "2025-04": 40     # 40% der Monatskapazität im April
+
+  - name: Projekt B
+    start: 2025-03-01
+    end: 2025-03-31
+    rest_budget_hours: 80
+    rate_eur_per_h: 95.0
+    weights_by_month:
+      "2025-03": 40     # 40% der Monatskapazität im März
+      # April fehlt → B ist im April nicht aktiv, daher irrelevant
+
+  - name: Projekt C
+    start: 2025-04-01
+    end: 2025-04-30
+    rest_budget_hours: 60
+    rate_eur_per_h: 110.0
+    # Für April keine Gewichte angegeben → Gleichverteilung mit anderen aktiven Projekten im April
+
