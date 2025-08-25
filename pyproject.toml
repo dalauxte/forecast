@@ -19,3 +19,6 @@ forecast = "forecast.cli:main"
 package-dir = {"" = "src"}
 packages = ["forecast"]
 
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

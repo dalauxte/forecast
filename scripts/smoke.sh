@@ -23,7 +23,7 @@ fi
 echo "[smoke] Python: $($PY -V)"
 
 echo "[smoke] Importing package..."
-$PY - <<'PY'
+PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH+:$PYTHONPATH}" $PY - <<'PY'
 try:
     import forecast  # noqa: F401
     print('[smoke] import forecast: OK')
@@ -34,7 +34,7 @@ PY
 
 echo "[smoke] Running CLI (module)..."
 set -o pipefail
-if ! $PY -m forecast.cli --config "$CONFIG_PATH" --export csv | head -n 20; then
+if ! PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH+:$PYTHONPATH}" $PY -m forecast.cli --config "$CONFIG_PATH" --export csv | head -n 20; then
   echo "[smoke] CLI run failed" >&2
   exit 1
 fi
@@ -49,4 +49,3 @@ else
 fi
 
 echo "[smoke] Done."
-
