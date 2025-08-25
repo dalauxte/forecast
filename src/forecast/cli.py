@@ -21,10 +21,20 @@ def _collect_interval_overrides(capacity_cfg) -> List[Tuple[date, date, float]]:
     return res
 
 
-def run(config_path: str, output_path: str | None = None, export: str | None = None,
+def run(config_path: str | None = None, output_path: str | None = None, export: str | None = None,
         as_of: str | None = None, planning_start: str | None = None, planning_end: str | None = None,
         round_hours: float | None = None, outdir: str | None = None) -> int:
-    cfg: Config = load_config(config_path)
+    import os
+    # Determine config path
+    cfg_path = config_path
+    if not cfg_path:
+        fallback = os.path.join("config", "config.yml")
+        if os.path.exists(fallback):
+            cfg_path = fallback
+        else:
+            raise FileNotFoundError("Keine --config angegeben und config/config.yml nicht gefunden.")
+
+    cfg: Config = load_config(cfg_path)
 
     if round_hours is not None:
         cfg.settings.round_hours = float(round_hours)

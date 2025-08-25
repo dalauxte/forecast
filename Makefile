@@ -1,4 +1,4 @@
-.PHONY: smoke venv install deps
+.PHONY: smoke venv install deps init-config
 
 smoke:
 	@bash scripts/smoke.sh
@@ -14,3 +14,8 @@ install:
 deps:
 	@python -m pip install --upgrade pip
 	@python -m pip install PyYAML holidays tabulate
+
+init-config:
+	@mkdir -p config
+	@cp -n doc/manual/config.sample.yml config/config.yml || true
+	@echo "Config initialisiert unter config/config.yml (falls nicht vorhanden)."

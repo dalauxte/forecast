@@ -10,7 +10,8 @@ Diese Anleitung beschreibt die zentrale Konfiguration per `config.yml` und das e
 - Export und Ausgabe
 
 ## Konfiguration (`config.yml`)
-Siehe ausführliches Beispiel in `config.sample.yml`. Kernbereiche:
+Standard-Suchpfad: `config/config.yml` (dann ist `--config` optional). Beispiel siehe `doc/manual/config.sample.yml`.
+Kernbereiche:
 
 - `settings`:
   - `state`: Bundesland für Feiertage (z. B. `NI`).
@@ -41,6 +42,11 @@ Siehe ausführliches Beispiel in `config.sample.yml`. Kernbereiche:
 - CSV-Export: Standardmäßig wird bei jedem Lauf eine Datei in `output/` gespeichert.
   - Dateiname: `forecast_YYYYMMDD_HHMMSS.csv`
   - Zielordner anpassbar mit `--outdir`, oder exakte Datei mit `--output`.
+
+## Schnellstart (empfohlen)
+- `cp doc/manual/config.sample.yml config/config.yml`
+- `make install` (oder `make deps`)
+- `forecast --outdir output` (oder ohne Flags, da Default-Pfade genutzt werden)
 
 ## Historie
 - Im MVP werden historische Daten nicht verwendet. Perspektivisch: Monats-CSV zur Ableitung von Gewichten/Trends und Namensmapping.
