@@ -36,7 +36,11 @@ def niedersachsen_holidays(years: Iterable[int]) -> Set[date]:
         # Fallback: keine automatische Berechnung, nur leer
         return found
     try:
-        de = holidays.Germany(years=list(years), prov="NI")  # type: ignore
+        # Prefer subdiv (newer API), fallback to prov for older versions
+        try:
+            de = holidays.Germany(years=list(years), subdiv="NI")  # type: ignore[attr-defined]
+        except TypeError:
+            de = holidays.Germany(years=list(years), prov="NI")  # type: ignore
         for d in de:
             found.add(d)
         return found
@@ -66,4 +70,3 @@ def workdays_in_period(period: Tuple[date, date], state: str, holiday_overrides_
             continue
         res.append(d)
     return res
-

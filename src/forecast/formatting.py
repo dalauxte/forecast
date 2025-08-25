@@ -38,11 +38,14 @@ def render_table(rows: List[dict]) -> str:
         "Projekt",
         "Zeitraum",
         "Tage",
+        "Kapazität (h)",
+        "ØKap/Tag",
         "Øh/Tag 100%",
         "Øh/Tag 90%",
         "Øh/Tag 80%",
-        "ØKap/Tag",
         "Util 100%",
+        "Util 90%",
+        "Util 80%",
         "Umsatz 100%",
         "Umsatz 90%",
         "Umsatz 80%",
@@ -53,11 +56,15 @@ def render_table(rows: List[dict]) -> str:
             r["Projekt"],
             r["Zeitraum"],
             r["Tage"],
+            format_number_de(r["Kapazität (h)"], 2),
+            format_number_de(r["ØKap/Tag"], 2),
             format_number_de(r["Øh/Tag 100%"], 2),
             format_number_de(r["Øh/Tag 90%"], 2),
             format_number_de(r["Øh/Tag 80%"], 2),
             format_number_de(r["ØKap/Tag"], 2),
             format_number_de(r["Util 100%"], 2),
+            format_number_de(r["Util 90%"], 2),
+            format_number_de(r["Util 80%"], 2),
             format_currency_eur(r["Umsatz 100%"]),
             format_currency_eur(r["Umsatz 90%"]),
             format_currency_eur(r["Umsatz 80%"]),
@@ -76,7 +83,7 @@ def render_table(rows: List[dict]) -> str:
 def export_csv_semicolon(rows: List[dict]) -> str:
     # Returns CSV content as a string with semicolon delimiter and DE decimals
     headers = [
-        "Projekt","Zeitraum","Tage","Øh/Tag 100%","Øh/Tag 90%","Øh/Tag 80%","ØKap/Tag","Util 100%","Umsatz 100%","Umsatz 90%","Umsatz 80%"
+        "Projekt","Zeitraum","Tage","Kapazität (h)","ØKap/Tag","Øh/Tag 100%","Øh/Tag 90%","Øh/Tag 80%","Util 100%","Util 90%","Util 80%","Umsatz 100%","Umsatz 90%","Umsatz 80%"
     ]
     out = []
     out.append(";".join(headers))
@@ -85,14 +92,16 @@ def export_csv_semicolon(rows: List[dict]) -> str:
             str(r["Projekt"]),
             str(r["Zeitraum"]),
             str(r["Tage"]),
+            format_number_de(r["Kapazität (h)"], 2),
+            format_number_de(r["ØKap/Tag"], 2),
             format_number_de(r["Øh/Tag 100%"], 2),
             format_number_de(r["Øh/Tag 90%"], 2),
             format_number_de(r["Øh/Tag 80%"], 2),
-            format_number_de(r["ØKap/Tag"], 2),
             format_number_de(r["Util 100%"], 2),
+            format_number_de(r["Util 90%"], 2),
+            format_number_de(r["Util 80%"], 2),
             format_number_de(r["Umsatz 100%"], 2),
             format_number_de(r["Umsatz 90%"], 2),
             format_number_de(r["Umsatz 80%"], 2),
         ]))
     return "\n".join(out)
-

@@ -38,15 +38,20 @@ Kernbereiche:
 
 ## Ausgabe und Export
 - CLI-Tabellenansicht mit:
-  - `Projekt | Zeitraum (Schnitt) | Verbl. Tage | Zugeordnete Kapazität (h) | Restbudget (h) | Øh/Tag (100/90/80) | Auslastung (100/90/80) | Umsatz (100/90/80)`
+  - `Projekt | Zeitraum (Schnitt) | Verbl. Tage | Kapazität (h) | ØKap/Tag | Øh/Tag (100/90/80) | Util (100/90/80) | Umsatz (100/90/80)`
 - CSV-Export: Standardmäßig wird bei jedem Lauf eine Datei in `output/` gespeichert.
   - Dateiname: `forecast_YYYYMMDD_HHMMSS.csv`
   - Zielordner anpassbar mit `--outdir`, oder exakte Datei mit `--output`.
+- Gesamtzeile: Am Tabellenende werden Summen für „Kapazität (h)“ und „Umsatz (100/90/80)“ ausgewiesen.
+- Hinweise: Projekte ohne verbleibende Arbeitstage werden genannt; zusätzlich Warnung, wenn Ziel (100/90/80) mehr als zugeordnete Kapazität/Tag erfordert.
 
 ## Schnellstart (empfohlen)
 - `cp doc/manual/config.sample.yml config/config.yml`
 - `make install` (oder `make deps`)
 - `forecast --outdir output` (oder ohne Flags, da Default-Pfade genutzt werden)
+
+## Locale/Formatierung
+- Derzeit fest auf DE (Dezimal-Komma, EUR); `settings.locale` wird im MVP nicht ausgewertet.
 
 ## Historie
 - Im MVP werden historische Daten nicht verwendet. Perspektivisch: Monats-CSV zur Ableitung von Gewichten/Trends und Namensmapping.

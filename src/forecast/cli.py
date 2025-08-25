@@ -45,6 +45,16 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
         cfg.settings.planning_period.start = start
         cfg.settings.planning_period.end = end
 
+    # Apply as_of (Stichtag): exclude days before as_of by shifting planning start
+    eff_as_of = None
+    if as_of:
+        eff_as_of = date.fromisoformat(as_of)
+    elif cfg.settings.as_of:
+        eff_as_of = cfg.settings.as_of
+    if eff_as_of:
+        if eff_as_of > cfg.settings.planning_period.start:
+            cfg.settings.planning_period.start = eff_as_of
+
     planning_period = (cfg.settings.planning_period.start, cfg.settings.planning_period.end)
 
     # Workdays for overall planning period
@@ -71,10 +81,20 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
     explicit_weights: Dict[str, Dict[str, float]] = {}
     workdays_by_project: Dict[str, List[date]] = {}
 
+    ignored_projects: List[str] = []
+    ignored_reasons: Dict[str, str] = {}
+
     for p in cfg.projects:
         cut = intersection(planning_period, (p.start, p.end))
         if cut is None:
             continue
+        # Workdays per project (within its cut)
+        wdays = workdays_in_period(cut, cfg.settings.state, cfg.calendar.holiday_overrides_add, cfg.calendar.holiday_overrides_remove, cfg.calendar.vacation_days)
+        if len(wdays) == 0:
+            ignored_projects.append(p.name)
+            ignored_reasons[p.name] = "Keine verbleibenden Arbeitstage im Planungsschnitt"
+            continue
+
         projects.append({
             "name": p.name,
             "start": cut[0],
@@ -98,8 +118,6 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
             projects_by_month.setdefault(m, []).append(p.name)
         explicit_weights[p.name] = dict(p.weights_by_month)
 
-        # Workdays per project (within its cut)
-        wdays = workdays_in_period(cut, cfg.settings.state, cfg.calendar.holiday_overrides_add, cfg.calendar.holiday_overrides_remove, cfg.calendar.vacation_days)
         workdays_by_project[p.name] = wdays
 
     assigned = assign_capacity_by_project_month(capacity_by_month, projects_by_month, explicit_weights)
@@ -129,14 +147,38 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
             "Umsatz 80%": r.revenue_80,
         })
 
+    # Aggregate totals and utilization warnings
+    total_capacity = sum(r["Kapazität (h)"] for r in rows if isinstance(r.get("Kapazität (h)"), (int, float)))
+    total_rev_100 = sum(r["Umsatz 100%"] for r in rows if isinstance(r.get("Umsatz 100%"), (int, float)))
+    total_rev_90 = sum(r["Umsatz 90%"] for r in rows if isinstance(r.get("Umsatz 90%"), (int, float)))
+    total_rev_80 = sum(r["Umsatz 80%"] for r in rows if isinstance(r.get("Umsatz 80%"), (int, float)))
+
+    total_row = {
+        "Projekt": "GESAMT",
+        "Zeitraum": "",
+        "Tage": "",
+        "Kapazität (h)": total_capacity,
+        "ØKap/Tag": None,
+        "Øh/Tag 100%": None,
+        "Øh/Tag 90%": None,
+        "Øh/Tag 80%": None,
+        "Util 100%": None,
+        "Util 90%": None,
+        "Util 80%": None,
+        "Umsatz 100%": total_rev_100,
+        "Umsatz 90%": total_rev_90,
+        "Umsatz 80%": total_rev_80,
+    }
+    rows_with_total = rows + [total_row]
+
     # Print table
-    print(render_table(rows))
+    print(render_table(rows_with_total))
 
     # Export: always write a CSV with timestamp into outdir (default: ./output)
     from datetime import datetime
     import os
 
-    content = export_csv_semicolon(rows)
+    content = export_csv_semicolon(rows_with_total)
     if output_path:
         dest = output_path
         os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
@@ -148,6 +190,25 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
     with open(dest, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"\nGespeichert: {dest}")
+
+    # Print warnings if any
+    util_warnings = []
+    for r in results:
+        if r.assigned_avg_per_day <= 0:
+            continue
+        if r.required_per_day_100 and r.required_per_day_100 > r.assigned_avg_per_day:
+            util_warnings.append(f"{r.name}: 100% Ziel erfordert mehr als zugeordnete Kapazität")
+        if r.required_per_day_90 and r.required_per_day_90 > r.assigned_avg_per_day:
+            util_warnings.append(f"{r.name}: 90% Ziel erfordert mehr als zugeordnete Kapazität")
+        if r.required_per_day_80 and r.required_per_day_80 > r.assigned_avg_per_day:
+            util_warnings.append(f"{r.name}: 80% Ziel erfordert mehr als zugeordnete Kapazität")
+
+    if ignored_projects or util_warnings:
+        print("\nHinweise:")
+        for p in ignored_projects:
+            print(f"- Ignoriert: {p} – {ignored_reasons.get(p,'')}")
+        for w in util_warnings:
+            print(f"- {w}")
 
     return 0
 
