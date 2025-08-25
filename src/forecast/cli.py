@@ -23,7 +23,7 @@ def _collect_interval_overrides(capacity_cfg) -> List[Tuple[date, date, float]]:
 
 def run(config_path: str, output_path: str | None = None, export: str | None = None,
         as_of: str | None = None, planning_start: str | None = None, planning_end: str | None = None,
-        round_hours: float | None = None) -> int:
+        round_hours: float | None = None, outdir: str | None = None) -> int:
     cfg: Config = load_config(config_path)
 
     if round_hours is not None:
@@ -122,14 +122,22 @@ def run(config_path: str, output_path: str | None = None, export: str | None = N
     # Print table
     print(render_table(rows))
 
-    # Export
-    if export and export.lower() == "csv":
-        content = export_csv_semicolon(rows)
-        if output_path:
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(content)
-        else:
-            print("\nCSV:\n" + content)
+    # Export: always write a CSV with timestamp into outdir (default: ./output)
+    from datetime import datetime
+    import os
+
+    content = export_csv_semicolon(rows)
+    if output_path:
+        dest = output_path
+        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+    else:
+        od = outdir or "output"
+        os.makedirs(od, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dest = os.path.join(od, f"forecast_{ts}.csv")
+    with open(dest, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"\nGespeichert: {dest}")
 
     return 0
 
@@ -137,12 +145,13 @@ def run(config_path: str, output_path: str | None = None, export: str | None = N
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Forecast-Planer (CLI)")
     parser.add_argument("--config", required=True, help="Pfad zur config.yml")
-    parser.add_argument("--output", help="Pfad für Exportdatei")
-    parser.add_argument("--export", choices=["csv"], help="Exportformat")
+    parser.add_argument("--output", help="Pfad für Exportdatei (überschreibt --outdir)")
+    parser.add_argument("--export", choices=["csv"], help="Exportformat (ignoriert, CSV ist Standard)")
     parser.add_argument("--as-of", dest="as_of", help="Stichtag (YYYY-MM-DD)")
     parser.add_argument("--planning-start", help="Start des Planungszeitraums (YYYY-MM-DD)")
     parser.add_argument("--planning-end", help="Ende des Planungszeitraums (YYYY-MM-DD)")
     parser.add_argument("--round", dest="round_hours", type=float, help="Rundung (z. B. 0.15)")
+    parser.add_argument("--outdir", default="output", help="Ausgabeverzeichnis (Default: output)")
     args = parser.parse_args(argv)
     try:
         return run(
@@ -153,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             planning_start=args.planning_start,
             planning_end=args.planning_end,
             round_hours=args.round_hours,
+            outdir=args.outdir,
         )
     except Exception as e:
         print(f"Fehler: {e}", file=sys.stderr)
@@ -161,4 +171,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

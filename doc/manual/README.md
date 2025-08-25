@@ -38,7 +38,9 @@ Siehe ausführliches Beispiel in `config.sample.yml`. Kernbereiche:
 ## Ausgabe und Export
 - CLI-Tabellenansicht mit:
   - `Projekt | Zeitraum (Schnitt) | Verbl. Tage | Zugeordnete Kapazität (h) | Restbudget (h) | Øh/Tag (100/90/80) | Auslastung (100/90/80) | Umsatz (100/90/80)`
-- Export als CSV (deutsches Zahlen-/Währungsformat empfohlen).
+- CSV-Export: Standardmäßig wird bei jedem Lauf eine Datei in `output/` gespeichert.
+  - Dateiname: `forecast_YYYYMMDD_HHMMSS.csv`
+  - Zielordner anpassbar mit `--outdir`, oder exakte Datei mit `--output`.
 
 ## Historie
 - Im MVP werden historische Daten nicht verwendet. Perspektivisch: Monats-CSV zur Ableitung von Gewichten/Trends und Namensmapping.
@@ -55,4 +57,3 @@ name_map:
 - Einzeltage in `interval_overrides` durch `start == end` definieren.
 - Rundung `round_hours` wirkt auf Øh/Tag-Ausgaben.
 - Krankheit wird erwartungswertbasiert fraktional abgezogen (z. B. 2% von Arbeitstagen im Monat).
-

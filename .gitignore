@@ -1,0 +1,13 @@
+# Python venv
+.venv/
+
+# Output artifacts (keep placeholder)
+output/*
+!output/.gitkeep
+
+# Local config (keep placeholder)
+config/*
+!config/.gitkeep
+
+# OS files
+.DS_Store
