@@ -131,8 +131,25 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
     )
 
     # Format output rows
+    # Prepare monthly day breakdown keys
+    # Collect all month keys present in any project's workdays
+    all_months: List[str] = []
+    months_set = set()
+    for pname, days in workdays_by_project.items():
+        for d in days:
+            mk = month_key(d)
+            if mk not in months_set:
+                months_set.add(mk)
+                all_months.append(mk)
+    all_months.sort()
+
     rows = []
     for r in results:
+        # month day counts for this project
+        month_counts: Dict[str, int] = {}
+        for d in workdays_by_project.get(r.name, []):
+            mk = month_key(d)
+            month_counts[mk] = month_counts.get(mk, 0) + 1
         rows.append({
             "Projekt": r.name,
             "Zeitraum": f"{r.period_start}–{r.period_end}",
@@ -149,6 +166,8 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
             "Umsatz 90%": r.revenue_90,
             "Umsatz 80%": r.revenue_80,
         })
+        for mk in all_months:
+            rows[-1][f"Tage {mk}"] = month_counts.get(mk, 0)
 
     # Aggregate totals and utilization warnings
     total_capacity = sum(r["Kapazität (h)"] for r in rows if isinstance(r.get("Kapazität (h)"), (int, float)))
@@ -172,6 +191,10 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
         "Umsatz 90%": total_rev_90,
         "Umsatz 80%": total_rev_80,
     }
+    # Sum of monthly day counts across all rows
+    for mk in all_months:
+        key = f"Tage {mk}"
+        total_row[key] = sum(r.get(key, 0) for r in rows)
     rows_with_total = rows + [total_row]
 
     # Print table
@@ -181,7 +204,7 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
     from datetime import datetime
     import os
 
-    content = export_csv_semicolon(rows_with_total)
+    content = export_csv_semicolon(rows_with_total, month_keys=all_months)
     if output_path:
         dest = output_path
         os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)

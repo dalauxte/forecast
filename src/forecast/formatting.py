@@ -80,28 +80,36 @@ def render_table(rows: List[dict]) -> str:
     return "\n".join(lines)
 
 
-def export_csv_semicolon(rows: List[dict]) -> str:
+def export_csv_semicolon(rows: List[dict], month_keys: List[str] | None = None) -> str:
     # Returns CSV content as a string with semicolon delimiter and DE decimals
-    headers = [
+    base_headers = [
         "Projekt","Zeitraum","Tage","Kapazität (h)","ØKap/Tag","Øh/Tag 100%","Øh/Tag 90%","Øh/Tag 80%","Util 100%","Util 90%","Util 80%","Umsatz 100%","Umsatz 90%","Umsatz 80%"
     ]
+    month_headers: List[str] = []
+    if month_keys:
+        month_headers = [f"Tage {m}" for m in month_keys]
+    headers = base_headers + month_headers
     out = []
     out.append(";".join(headers))
     for r in rows:
-        out.append(";".join([
-            str(r["Projekt"]),
-            str(r["Zeitraum"]),
-            str(r["Tage"]),
-            format_number_de(r["Kapazität (h)"], 2),
-            format_number_de(r["ØKap/Tag"], 2),
-            format_number_de(r["Øh/Tag 100%"], 2),
-            format_number_de(r["Øh/Tag 90%"], 2),
-            format_number_de(r["Øh/Tag 80%"], 2),
-            format_number_de(r["Util 100%"], 2),
-            format_number_de(r["Util 90%"], 2),
-            format_number_de(r["Util 80%"], 2),
-            format_number_de(r["Umsatz 100%"], 2),
-            format_number_de(r["Umsatz 90%"], 2),
-            format_number_de(r["Umsatz 80%"], 2),
-        ]))
+        row_vals = [
+            str(r.get("Projekt", "")),
+            str(r.get("Zeitraum", "")),
+            str(r.get("Tage", "")),
+            format_number_de(r.get("Kapazität (h)"), 2),
+            format_number_de(r.get("ØKap/Tag"), 2),
+            format_number_de(r.get("Øh/Tag 100%"), 2),
+            format_number_de(r.get("Øh/Tag 90%"), 2),
+            format_number_de(r.get("Øh/Tag 80%"), 2),
+            format_number_de(r.get("Util 100%"), 2),
+            format_number_de(r.get("Util 90%"), 2),
+            format_number_de(r.get("Util 80%"), 2),
+            format_number_de(r.get("Umsatz 100%"), 2),
+            format_number_de(r.get("Umsatz 90%"), 2),
+            format_number_de(r.get("Umsatz 80%"), 2),
+        ]
+        for mh in month_headers:
+            val = r.get(mh)
+            row_vals.append(str(val if val is not None else ""))
+        out.append(";".join(row_vals))
     return "\n".join(out)
