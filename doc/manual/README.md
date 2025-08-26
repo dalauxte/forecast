@@ -22,7 +22,15 @@ Kernbereiche:
   - `per_weekday`: Standardstunden pro Wochentag (Mo–Fr), optional.
   - `interval_overrides`: Abweichende Kapazität in Intervallen oder Einzeltagen (`start == end`).
 - `calendar`:
-  - `vacation_days`: Liste einzelner Urlaubstage (YYYY-MM-DD).
+  - `vacation_days`: Liste von Urlauben – Einzeltage (YYYY-MM-DD) oder Intervalle als Mapping `{ start, end }`.
+    Beispiel:
+    
+    ```yaml
+    calendar:
+      vacation_days:
+        - 2025-03-28              # Einzeltag
+        - { start: 2025-04-15, end: 2025-04-19 }  # Zeitraum (inkl. Start/Ende)
+    ```
   - `holiday_overrides`: Feiertage hinzufügen/entfernen.
 - `sickness`:
   - `prob_per_workday`: Wahrscheinlichkeit pro Arbeitstag (Default 0.02). Erwartungswertverfahren.

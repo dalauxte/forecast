@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 import os
 import yaml
@@ -123,7 +123,35 @@ class CalendarConfig:
 
     @staticmethod
     def from_dict(d: dict) -> "CalendarConfig":
-        vacations = [_parse_date(x, "calendar.vacation_days[*]") for x in (d.get("vacation_days") or [])]
+        # Accept both single dates and ranges {start, end} inside vacation_days.
+        raw_vac = d.get("vacation_days") or []
+
+        def _expand_range(s: date, e: date) -> List[date]:
+            if e < s:
+                raise ValueError("calendar.vacation_days[*]: end liegt vor start")
+            out: List[date] = []
+            cur = s
+            while cur <= e:
+                out.append(cur)
+                cur = cur + timedelta(days=1)
+            return out
+
+        vacations: List[date] = []
+        for idx, x in enumerate(raw_vac):
+            # Allow mapping with {start, end} or single date-like value
+            if isinstance(x, dict):
+                if "start" in x and "end" in x:
+                    s = _parse_date(x["start"], f"calendar.vacation_days[{idx}].start")
+                    e = _parse_date(x["end"], f"calendar.vacation_days[{idx}].end")
+                    vacations.extend(_expand_range(s, e))
+                elif "date" in x:
+                    vacations.append(_parse_date(x["date"], f"calendar.vacation_days[{idx}].date"))
+                else:
+                    raise ValueError(
+                        "calendar.vacation_days[*]: erwartet Datum (YYYY-MM-DD) oder Mapping mit 'start'/'end'"
+                    )
+            else:
+                vacations.append(_parse_date(x, f"calendar.vacation_days[{idx}]"))
         overrides = d.get("holiday_overrides") or {}
         add = [_parse_date(x, "holiday_overrides.add[*]") for x in (overrides.get("add") or [])]
         rem = [_parse_date(x, "holiday_overrides.remove[*]") for x in (overrides.get("remove") or [])]

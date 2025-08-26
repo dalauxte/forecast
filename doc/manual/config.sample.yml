@@ -15,7 +15,7 @@ capacity:
 calendar:
   vacation_days:
     - 2025-03-28
-    - 2025-04-18
+    - { start: 2025-04-15, end: 2025-04-19 }   # Zeitraum statt Einzeltage
   holiday_overrides:
     add: []
     remove: []
@@ -48,4 +48,3 @@ projects:
     rest_budget_hours: 60
     rate_eur_per_h: 110.0
     # Für April keine Gewichte angegeben → Gleichverteilung mit anderen aktiven Projekten im April
-

@@ -13,6 +13,11 @@ __pycache__/
 output/*
 !output/.gitkeep
 
+# Bundled binaries / build artifacts
+dist/
+build/
+forecast.spec
+
 # Local config (keep placeholder)
 config/*
 !config/.gitkeep

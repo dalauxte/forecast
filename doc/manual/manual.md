@@ -92,6 +92,9 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
 - `make deps`: nur Abhängigkeiten installieren
 - `make smoke`: schneller Testlauf mit Beispielkonfiguration
 - `make init-config`: legt `config/config.yml` an (falls nicht vorhanden)
+ - `make bundle-deps`: installiert PyInstaller
+ - `make bundle-macos`: baut ein Einzel-Binary `dist/forecast` (macOS)
+ - `make bundle-clean`: bereinigt Build-Artefakte
 
 ## Exit-Codes
 - `0` Erfolg, `1` Fehler (Validierung, Pfade, fehlende Abhängigkeiten etc.).
@@ -100,3 +103,8 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
 - Zahlen-/Währungsformat ist im MVP fest auf DE (Dezimal-Komma, EUR). Eine Umschaltung via `settings.locale` ist noch nicht aktiv.
 - Die Feiertagsberechnung erfolgt lokal/offline über `python-holidays`.
 
+## Standalone Binary (macOS)
+Siehe `doc/manual/bundling.md` für Details. Kurzfassung:
+1) `python -m pip install -e . && python -m pip install pyinstaller`
+2) `make bundle-macos`
+3) `cp dist/forecast <dein Arbeitsverzeichnis>` und dort ausführen.
