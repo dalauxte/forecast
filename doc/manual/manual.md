@@ -58,6 +58,14 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
 ## Output
 - CLI-Tabelle inkl.:
   - `Projekt | Zeitraum (Schnitt) | Verbl. Tage | Kapazität (h) | ØKap/Tag | Øh/Tag (100/90/80) | Util (100/90/80) | Umsatz (100/90/80)`
+  - Util (Auslastung):
+    - Bedeutung: Verhältnis der benötigten Ø‑Stunden/Tag zum zugeordneten Ø‑Kapazitätswert/Tag.
+    - Formel: `Util 100% = Øh/Tag 100% ÷ ØKap/Tag` (entsprechend 90%/80%).
+    - Interpretation: `1,00` = exakt passend, `< 1,00` = Reserve, `> 1,00` = Kapazität reicht nicht.
+    - Anzeige: dimensionslos; bei fehlender ØKap/Tag wird `-` ausgegeben.
+    - Beispiel:
+      - Gegeben: `ØKap/Tag = 6,00`, `Øh/Tag 100% = 5,00`, `Øh/Tag 90% = 4,50`, `Øh/Tag 80% = 4,00`.
+      - Dann: `Util 100% = 5,00 / 6,00 = 0,83`, `Util 90% = 4,50 / 6,00 = 0,75`, `Util 80% = 4,00 / 6,00 = 0,67`.
 - CSV-Export:
   - Wird immer geschrieben.
   - Standard: `output/forecast_YYYYMMDD_HHMMSS.csv` (anpassbar per `--outdir`/`--output`).

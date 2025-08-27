@@ -61,7 +61,6 @@ def render_table(rows: List[dict]) -> str:
             format_number_de(r["Øh/Tag 100%"], 2),
             format_number_de(r["Øh/Tag 90%"], 2),
             format_number_de(r["Øh/Tag 80%"], 2),
-            format_number_de(r["ØKap/Tag"], 2),
             format_number_de(r["Util 100%"], 2),
             format_number_de(r["Util 90%"], 2),
             format_number_de(r["Util 80%"], 2),

@@ -47,6 +47,12 @@ Kernbereiche:
 ## Ausgabe und Export
 - CLI-Tabellenansicht mit:
   - `Projekt | Zeitraum (Schnitt) | Verbl. Tage | Kapazität (h) | ØKap/Tag | Øh/Tag (100/90/80) | Util (100/90/80) | Umsatz (100/90/80)`
+  - Erläuterung „Util …“ (Auslastung):
+    - Bedeutung: Verhältnis der benötigten Ø‑Stunden/Tag zum zugeordneten Ø‑Kapazitätswert/Tag.
+    - Formel: `Util 100% = Øh/Tag 100% ÷ ØKap/Tag` (analog für 90%/80%).
+    - Interpretation: `1.00` = genau passend, `< 1.00` = Reserve, `> 1.00` = Kapazität reicht nicht.
+    - Anzeige: dimensionsloser Faktor (kein Prozent). Bei fehlender ØKap/Tag wird `-` gezeigt.
+    - Beispiel: Wenn `ØKap/Tag = 6,00` und `Øh/Tag 100% = 5,00`, dann `Util 100% = 5,00 / 6,00 = 0,83`. Für 90% wären es `4,50 / 6,00 = 0,75`.
 - CSV-Export: Standardmäßig wird bei jedem Lauf eine Datei in `output/` gespeichert.
   - Dateiname: `forecast_YYYYMMDD_HHMMSS.csv`
   - Zielordner anpassbar mit `--outdir`, oder exakte Datei mit `--output`.
