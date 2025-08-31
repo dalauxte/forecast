@@ -202,6 +202,8 @@ def create_html_report(cfg: Config) -> str:
 
     # Used vs unused considering limits and remaining budget
     used_by_project_month: Dict[Tuple[str, str], float] = {}
+    # Allowed by configuration per month (ignores total budget): min(assigned, limit)
+    allowed_by_config_pm: Dict[Tuple[str, str], float] = {}
     for r in results:
         remaining = float(r.rest_budget_hours or 0.0)
         # find original project to read limits
@@ -210,10 +212,14 @@ def create_html_report(cfg: Config) -> str:
         for mk in all_months:
             a = assigned.get((r.name, mk), 0.0)
             lim = float(limits.get(mk, float("inf")))
-            use = min(a, lim, remaining)
+            allow = min(a, lim)
+            use = min(allow, remaining)
             if use < 0:
                 use = 0.0
+            if allow < 0:
+                allow = 0.0
             used_by_project_month[(r.name, mk)] = use
+            allowed_by_config_pm[(r.name, mk)] = allow
             remaining = max(0.0, remaining - use)
 
     used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzte Stunden in {mk} (mit Limits/Budget)") for mk in all_months]
@@ -244,11 +250,13 @@ def create_html_report(cfg: Config) -> str:
             u = float(used_by_project_month.get((name, mk), 0.0))
             used_sum += u
             width = 0 if total <= 0 else max(0.0, (u / total) * 100.0)
-            segs.append(f"<div class=\"seg\" title=\"{_html_escape(name)}: {format_number_de(u,2)} h\" style=\"width:{width:.4f}%;background:{color_for(i)}\"></div>")
+            pct = (u/total*100.0) if total>0 else 0.0
+            segs.append(f"<div class=\"seg\" title=\"{_html_escape(name)}: {format_number_de(u,2)} h ({pct:.1f}%)\" style=\"width:{width:.4f}%;background:{color_for(i)}\"></div>")
         rest = max(0.0, total - used_sum)
         rest_w = 0 if total <= 0 else max(0.0, (rest / total) * 100.0)
         if rest_w > 0:
-            segs.append(f"<div class=\"seg\" title=\"Rest: {format_number_de(rest,2)} h\" style=\"width:{rest_w:.4f}%;background:#cccccc\"></div>")
+            pct_r = (rest/total*100.0) if total>0 else 0.0
+            segs.append(f"<div class=\"seg\" title=\"Rest: {format_number_de(rest,2)} h ({pct_r:.1f}%)\" style=\"width:{rest_w:.4f}%;background:#cccccc\"></div>")
         chart_rows.append(f"<div class=\"row\"><div class=\"label\">{_html_escape(mk)}</div><div class=\"bar\">{''.join(segs)}</div><div class=\"label\">{format_number_de(total,2)} h</div></div>")
     monthly_stack_chart_html = "".join([
         "<div class=\"chart\">",
@@ -256,6 +264,30 @@ def create_html_report(cfg: Config) -> str:
         "".join(chart_rows),
         "</div>",
     ])
+
+    # Second chart: per project within each month – used vs available (by config)
+    proj_chart_rows = []
+    for mk in all_months:
+        # scale bars relative to max allowed in this month to improve comparability
+        max_allowed = max(allowed_by_config_pm.get((name, mk), 0.0) for name in proj_names) or 1.0
+        # add a month header row
+        proj_chart_rows.append(f"<div class=\"row\"><div class=\"label\"><strong>{_html_escape(mk)}</strong></div><div class=\"bar\"></div><div class=\"label\"></div></div>")
+        for i, name in enumerate(proj_names):
+            allow = float(allowed_by_config_pm.get((name, mk), 0.0))
+            used = float(used_by_project_month.get((name, mk), 0.0))
+            avail = max(0.0, allow - used)
+            total_w = 0 if max_allowed <= 0 else max(0.0, (allow / max_allowed) * 100.0)
+            used_w = 0 if max_allowed <= 0 else max(0.0, (used / max_allowed) * 100.0)
+            avail_w = max(0.0, total_w - used_w)
+            seg_used = f"<div class=\"seg\" title=\"{_html_escape(name)} genutzt: {format_number_de(used,2)} h ({(used/allow*100) if allow>0 else 0:.1f}%)\" style=\"width:{used_w:.4f}%;background:{color_for(i)}\"></div>"
+            # lighter color for available
+            hue = (i * 67) % 360
+            seg_avail = f"<div class=\"seg\" title=\"{_html_escape(name)} verfügbar: {format_number_de(avail,2)} h ({(avail/allow*100) if allow>0 else 0:.1f}%)\" style=\"width:{avail_w:.4f}%;background:hsl({hue}, 45%, 85%)\"></div>"
+            bar = f"<div class=\"bar\">{seg_used}{seg_avail}</div>"
+            label_left = f"{_html_escape(name)}"
+            label_right = f"{format_number_de(used,2)} / {format_number_de(allow,2)} h"
+            proj_chart_rows.append(f"<div class=\"row\"><div class=\"label\">{label_left}</div>{bar}<div class=\"label\">{label_right}</div></div>")
+    monthly_project_chart_html = "".join(["<div class=\"chart\">", "".join(proj_chart_rows), "</div>"])
 
     # Budget consumption rows (reuse used_by_project_month)
     budget_headers = [("Projekt", "Projektname")] + [(mk, f"Budgetverbrauch in {mk}") for mk in all_months] + [("Restbudget (h)", "Verbleibendes Budget am Projektende"), ("Status", "Budgetstatus zum Projektende")]
@@ -378,6 +410,7 @@ def create_html_report(cfg: Config) -> str:
         used_headers=used_headers,
         used_rows=used_rows,
         monthly_stack_chart_html=monthly_stack_chart_html,
+        monthly_project_chart_html=monthly_project_chart_html,
         budget_headers=budget_headers,
         budget_rows=budget_rows,
         budget_row_classes=budget_row_classes,

@@ -132,6 +132,7 @@ def export_html_page(
     budget_rows: List[List[str]],
     budget_row_classes: List[str] | None = None,
     monthly_stack_chart_html: str | None = None,
+    monthly_project_chart_html: str | None = None,
 ) -> str:
     styles = """
     <style>
@@ -216,6 +217,9 @@ def export_html_page(
         "<h2>Kapazitätsnutzung je Monat (gestapelt)</h2>",
         "<p class=\"desc\">Gesamtkapazität pro Monat mit den genutzten Anteilen je Projekt und dem verbleibenden Rest (nicht genutzt/zugewiesen).</p>",
         (monthly_stack_chart_html or '<p class="muted">Keine Daten</p>'),
+        "<h2>Projekt‑Kapazität je Monat (genutzt vs. verfügbar)</h2>",
+        "<p class=\"desc\">Für jeden Monat/Projekt: Anteil der in diesem Monat genutzten Stunden im Verhältnis zur laut Konfiguration verfügbaren Monatskapazität (ohne Budget). Verfügbar = min(Zuteilung, Monats‑Limit).</p>",
+        (monthly_project_chart_html or '<p class="muted">Keine Daten</p>'),
         "<h2>Budgetverbrauch pro Projekt (h)</h2>",
         "<p class=\"desc\">Monatlicher Budget-Burn. Status: Grün = Budget exakt am Projektende\nverbraucht; Gelb = Restbudget bleibt; Rot = Budget vor Projektende\nerreicht 0.</p>",
         "<div class=\"legend\"><span class=\"ok\">Grün: passt genau</span><span class=\"warn\">Gelb: Budget nicht voll verbraucht</span><span class=\"err\">Rot: Budget vor Projektende erschöpft</span></div>",
