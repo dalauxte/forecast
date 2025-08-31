@@ -7,8 +7,8 @@
 
 ## Zweck und Zielbild
 - Ziel: Unterstützung bei der Erstellung eines Stunden- und Umsatz-Forecasts zur Budgetausschöpfung je Projekt.
-- Ergebnis: Kennzahlen, wie viele Stunden pro verbleibendem Arbeitstag durchschnittlich gearbeitet werden müssen, um 100%, 90% oder 80% des (Rest-)Budgets auszuschöpfen; zusätzlich Umsatz-Projektion (EUR) basierend auf Stundensatz je Projekt.
-- Fokus: CLI-basiert, keine UI, lokale Ausführung, Eingaben/Outputs per Datei möglich.
+- Ergebnis: Kennzahlen, wie viele Stunden pro verbleibendem Arbeitstag durchschnittlich gearbeitet werden müssen, um 100%, 90% oder 80% des (Rest‑)Budgets auszuschöpfen; zusätzlich Umsatz-Projektion (EUR) basierend auf Stundensatz je Projekt.
+- Fokus: CLI mit HTML‑Bericht und optionale Live‑Simulation im lokalen Browser; lokale Ausführung, Eingaben/Outputs per Datei möglich.
 
 ## Systemkontext
 - Eingaben:
@@ -20,7 +20,8 @@
 - Ausgaben:
   - Pro Projekt: erforderliche Ø-Stunden/Arbeitstag für 100/90/80% Ziel; Auslastung im Vergleich zur zugeordneten Kapazität; prognostizierter Umsatz.
   - Gesamt: aggregierte Kennzahlen (Summe Stunden/Tag, Umsatz) für den Planungszeitraum.
-  - Export: CSV; zusätzlich CLI-Tabelle mit optionalen ASCII-Visuals.
+  - Export: HTML‑Bericht (mit Tabellen und Diagrammen); CLI zeigt eine ASCII‑Tabelle.
+  - Live‑Simulation: YAML links, Report rechts, lokal im Browser.
 
 ## Stakeholder
 - Primärnutzer: Berater (Einzelperson).
@@ -45,6 +46,8 @@
 - A11: Zielumgebung: macOS, Python 3.11+, offline.
 - A12: Währungs-/Zahlformat: Deutsch (de-DE), EUR.
  - A13: Fehlen Monatsgewichte, wird die Kapazität im jeweiligen Monat gleichmäßig auf alle aktiven Projekte verteilt (Gleichverteilung).
+- A14: `limits_by_month` begrenzen die pro Monat für das Projekt nutzbaren Stunden; nicht genutzte Zuteilung verfällt (projektbezogen) für den Monat.
+- A15: „Genutzt“ im Monat = min(Zuteilung, Monats‑Limit, Restbudget zu Monatsbeginn); Budget wird monatsweise sequentiell verbraucht.
 
 ## Qualitätsziele
 - Nachvollziehbarkeit: Rechenweg transparent (z. B. Log/Audit-Abschnitt).

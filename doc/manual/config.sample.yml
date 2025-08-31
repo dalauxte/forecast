@@ -32,6 +32,10 @@ projects:
     weights_by_month:
       "2025-03": 60     # 60% der Monatskapazität im März
       "2025-04": 40     # 40% der Monatskapazität im April
+    # Optional: Limits je Monat (max. nutzbare Stunden)
+    limits_by_month:
+      "2025-03": 50
+      "2025-04": 40
 
   - name: Projekt B
     start: 2025-03-01
