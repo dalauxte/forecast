@@ -26,3 +26,5 @@ config/*
 .DS_Store
 .idea/
 .vscode/
+
+.pyinstaller/
