@@ -160,7 +160,8 @@ def export_html_page(
       .chart .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
       .chart .label { width: 90px; font-size: 12px; color: #333; }
       .chart .bar { flex: 1; display: flex; height: 16px; background: #f1f1f1; border: 1px solid #e0e0e0; }
-      .chart .seg { height: 100%; }
+      .chart .seg { height: 100%; position: relative; }
+      .chart .seg .lbl { position: absolute; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 16px; white-space: nowrap; }
       .legend .swatch { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 6px; border: 1px solid #ddd; }
     </style>
     """

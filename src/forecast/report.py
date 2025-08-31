@@ -242,16 +242,27 @@ def create_html_report(cfg: Config) -> str:
         segs = []
         used_sum = 0.0
         for i, name in enumerate(proj_names):
+            # nur aktive Projekte im Monat berücksichtigen
+            if name not in projects_by_month.get(mk, []):
+                continue
             u = float(used_by_project_month.get((name, mk), 0.0))
             used_sum += u
             width = 0 if total <= 0 else max(0.0, (u / total) * 100.0)
             pct = (u/total*100.0) if total>0 else 0.0
-            segs.append(f"<div class=\"seg\" title=\"{_html_escape(name)}: {format_number_de(u,2)} h ({pct:.1f}%)\" style=\"width:{width:.4f}%;background:{color_for(i)}\"></div>")
+            if width >= 12:
+                lbl = f'<span class="lbl" style="color:#fff">{format_number_de(u,2)} h ({pct:.1f}%)</span>'
+            else:
+                lbl = ""
+            segs.append(f"<div class=\"seg\" title=\"{_html_escape(name)}: {format_number_de(u,2)} h ({pct:.1f}%)\" style=\"width:{width:.4f}%;background:{color_for(i)}\">{lbl}</div>")
         rest = max(0.0, total - used_sum)
         rest_w = 0 if total <= 0 else max(0.0, (rest / total) * 100.0)
         if rest_w > 0:
             pct_r = (rest/total*100.0) if total>0 else 0.0
-            segs.append(f"<div class=\"seg\" title=\"Rest: {format_number_de(rest,2)} h ({pct_r:.1f}%)\" style=\"width:{rest_w:.4f}%;background:#cccccc\"></div>")
+            if rest_w >= 12:
+                lbl_r = f'<span class="lbl" style="color:#333">{format_number_de(rest,2)} h ({pct_r:.1f}%)</span>'
+            else:
+                lbl_r = ""
+            segs.append(f"<div class=\"seg\" title=\"Rest: {format_number_de(rest,2)} h ({pct_r:.1f}%)\" style=\"width:{rest_w:.4f}%;background:#cccccc\">{lbl_r}</div>")
         chart_rows.append(f"<div class=\"row\"><div class=\"label\">{_html_escape(mk)}</div><div class=\"bar\">{''.join(segs)}</div><div class=\"label\">{format_number_de(total,2)} h</div></div>")
     monthly_stack_chart_html = "".join([
         "<div class=\"chart\">",
@@ -280,6 +291,8 @@ def create_html_report(cfg: Config) -> str:
         # add a month header row
         proj_chart_rows.append(f"<div class=\"row\"><div class=\"label\"><strong>{_html_escape(mk)}</strong></div><div class=\"bar\"></div><div class=\"label\"></div></div>")
         for i, name in enumerate(proj_names):
+            if name not in projects_by_month.get(mk, []):
+                continue
             avail_total = float(remaining_at_start.get(name, 0.0))
             used = float(used_by_project_month.get((name, mk), 0.0))
             avail_after = max(0.0, avail_total - used)
@@ -288,10 +301,18 @@ def create_html_report(cfg: Config) -> str:
             avail_w = max(0.0, total_w - used_w)
             used_pct = (used / avail_total * 100.0) if avail_total > 0 else 0.0
             avail_pct = (avail_after / avail_total * 100.0) if avail_total > 0 else 0.0
-            seg_used = f"<div class=\"seg\" title=\"{_html_escape(name)} genutzt: {format_number_de(used,2)} h ({used_pct:.1f}%)\" style=\"width:{used_w:.4f}%;background:{color_for(i)}\"></div>"
+            if used_w >= 12:
+                lbl_u = f'<span class="lbl" style="color:#fff">{format_number_de(used,2)} h ({used_pct:.1f}%)</span>'
+            else:
+                lbl_u = ""
+            seg_used = f"<div class=\"seg\" title=\"{_html_escape(name)} genutzt: {format_number_de(used,2)} h ({used_pct:.1f}%)\" style=\"width:{used_w:.4f}%;background:{color_for(i)}\">{lbl_u}</div>"
             # lighter color for available
             hue = (i * 67) % 360
-            seg_avail = f"<div class=\"seg\" title=\"{_html_escape(name)} verfügbar: {format_number_de(avail_after,2)} h ({avail_pct:.1f}%)\" style=\"width:{avail_w:.4f}%;background:hsl({hue}, 45%, 85%)\"></div>"
+            if avail_w >= 12:
+                lbl_a = f'<span class="lbl" style="color:#333">{format_number_de(avail_after,2)} h ({avail_pct:.1f}%)</span>'
+            else:
+                lbl_a = ""
+            seg_avail = f"<div class=\"seg\" title=\"{_html_escape(name)} verfügbar: {format_number_de(avail_after,2)} h ({avail_pct:.1f}%)\" style=\"width:{avail_w:.4f}%;background:hsl({hue}, 45%, 85%)\">{lbl_a}</div>"
             bar = f"<div class=\"bar\">{seg_used}{seg_avail}</div>"
             label_left = f"{_html_escape(name)}"
             label_right = f"{format_number_de(used,2)} / {format_number_de(avail_total,2)} h"
