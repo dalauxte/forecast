@@ -23,7 +23,7 @@ def _config_from_dict(data: dict) -> Config:
     return Config(settings=settings, capacity=capacity, calendar=calendar, sickness=sickness, projects=projects)
 
 
-INDEX_HTML = """<!DOCTYPE html>
+INDEX_HTML = r"""<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -45,8 +45,8 @@ INDEX_HTML = """<!DOCTYPE html>
       width: 100%; height: 100%; box-sizing: border-box; margin: 0;
       padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px;
     }
-    .editor pre.hl { position: absolute; inset: 0; color: #222; background: #fafafa; overflow: auto; pointer-events: none; white-space: pre; }
-    .editor textarea { position: relative; background: transparent; color: #111; resize: none; }
+    .editor pre.hl { position: absolute; inset: 0; color: #222; background: #fafafa; overflow: auto; pointer-events: none; white-space: pre-wrap; word-wrap: break-word; }
+    .editor textarea { position: relative; background: transparent; color: transparent; caret-color: #111; resize: none; }
     .hl .key { color: #1565c0; font-weight: 600; }
     .hl .str { color: #2e7d32; }
     .hl .num { color: #ad1457; }
