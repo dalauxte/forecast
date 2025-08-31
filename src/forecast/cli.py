@@ -11,7 +11,13 @@ from .calendar import intersection, workdays_in_period, month_key
 from .capacity import compute_capacity_by_date, aggregate_capacity_by_month
 from .weights import assign_capacity_by_project_month
 from .compute import compute_results
-from .formatting import render_table, export_csv_semicolon
+from .formatting import (
+    render_table,
+    export_html_page,
+    format_number_de,
+    format_currency_eur,
+)
+from .calendar import niedersachsen_holidays
 
 
 def _collect_interval_overrides(capacity_cfg) -> List[Tuple[date, date, float]]:
@@ -21,7 +27,7 @@ def _collect_interval_overrides(capacity_cfg) -> List[Tuple[date, date, float]]:
     return res
 
 
-def run(config_path: str | None = None, output_path: str | None = None, export: str | None = None,
+def run(config_path: str | None = None, output_path: str | None = None,
         as_of: str | None = None, planning_start: str | None = None, planning_end: str | None = None,
         round_hours: float | None = None, outdir: str | None = None) -> int:
     import os
@@ -79,6 +85,7 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
     projects: List[dict] = []
     projects_by_month: Dict[str, List[str]] = {}
     explicit_weights: Dict[str, Dict[str, float]] = {}
+    explicit_limits: Dict[str, Dict[str, float]] = {}
     workdays_by_project: Dict[str, List[date]] = {}
 
     ignored_projects: List[str] = []
@@ -117,6 +124,7 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
         for m in months:
             projects_by_month.setdefault(m, []).append(p.name)
         explicit_weights[p.name] = dict(p.weights_by_month)
+        explicit_limits[p.name] = dict(getattr(p, 'limits_by_month', {}) or {})
 
         workdays_by_project[p.name] = wdays
 
@@ -200,21 +208,21 @@ def run(config_path: str | None = None, output_path: str | None = None, export: 
     # Print table
     print(render_table(rows_with_total))
 
-    # Export: always write a CSV with timestamp into outdir (default: ./output)
+    # Export: write an HTML with timestamp into outdir (default: ./output)
     from datetime import datetime
     import os
 
-    content = export_csv_semicolon(rows_with_total, month_keys=all_months)
-    if output_path:
-        dest = output_path
-        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
-    else:
-        od = outdir or "output"
-        os.makedirs(od, exist_ok=True)
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        dest = os.path.join(od, f"forecast_{ts}.csv")
+    # Build common paths
+    od = outdir or "output"
+    os.makedirs(od, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Use shared report generator for HTML
+    from .report import create_html_report
+    html = create_html_report(cfg)
+    dest = output_path or os.path.join(od, f"forecast_{ts}.html")
     with open(dest, "w", encoding="utf-8") as f:
-        f.write(content)
+        f.write(html)
     print(f"\nGespeichert: {dest}")
 
     # Print warnings if any
@@ -243,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Forecast-Planer (CLI)")
     parser.add_argument("--config", required=False, help="Pfad zur config.yml (Default: config/config.yml)")
     parser.add_argument("--output", help="Pfad für Exportdatei (überschreibt --outdir)")
-    parser.add_argument("--export", choices=["csv"], help="Exportformat (ignoriert, CSV ist Standard)")
+    # CSV-Export wurde entfernt; Ausgabe erfolgt ausschließlich als HTML
     parser.add_argument("--as-of", dest="as_of", help="Stichtag (YYYY-MM-DD)")
     parser.add_argument("--planning-start", help="Start des Planungszeitraums (YYYY-MM-DD)")
     parser.add_argument("--planning-end", help="Ende des Planungszeitraums (YYYY-MM-DD)")
@@ -254,7 +262,6 @@ def main(argv: list[str] | None = None) -> int:
         return run(
             config_path=args.config,
             output_path=args.output,
-            export=args.export,
             as_of=args.as_of,
             planning_start=args.planning_start,
             planning_end=args.planning_end,

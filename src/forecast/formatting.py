@@ -79,36 +79,116 @@ def render_table(rows: List[dict]) -> str:
     return "\n".join(lines)
 
 
-def export_csv_semicolon(rows: List[dict], month_keys: List[str] | None = None) -> str:
-    # Returns CSV content as a string with semicolon delimiter and DE decimals
-    base_headers = [
-        "Projekt","Zeitraum","Tage","Kapazität (h)","ØKap/Tag","Øh/Tag 100%","Øh/Tag 90%","Øh/Tag 80%","Util 100%","Util 90%","Util 80%","Umsatz 100%","Umsatz 90%","Umsatz 80%"
+"""
+CSV-Export wurde entfernt. Der HTML-Export ist die primäre Ausgabe.
+"""
+
+
+# ---------------- HTML Export ----------------
+
+def _html_escape(s: str) -> str:
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
+
+
+def _render_html_table(headers: List[str], rows: List[List[str]], row_classes: List[str] | None = None) -> str:
+    ths = "".join(f"<th>{_html_escape(h)}</th>" for h in headers)
+    trs = []
+    for idx, r in enumerate(rows):
+        tds = "".join(f"<td>{_html_escape(str(v))}</td>" for v in r)
+        cls = ""
+        if row_classes and idx < len(row_classes) and row_classes[idx]:
+            cls = f" class=\"{_html_escape(row_classes[idx])}\""
+        trs.append(f"<tr{cls}>{tds}</tr>")
+    tbody = "\n".join(trs)
+    return f"<table><thead><tr>{ths}</tr></thead><tbody>{tbody}</tbody></table>"
+
+
+def export_html_page(
+    title: str,
+    overview_items: List[tuple[str, str]],
+    vacations: List[str],
+    proj_summary_headers: List[str],
+    proj_summary_rows: List[List[str]],
+    cap_headers: List[str],
+    cap_rows: List[List[str]],
+    perday_headers: List[str],
+    perday_rows: List[List[str]],
+    req_headers: List[str],
+    req_rows: List[List[str]],
+    used_headers: List[str],
+    used_rows: List[List[str]],
+    unused_headers: List[str],
+    unused_rows: List[List[str]],
+    budget_headers: List[str],
+    budget_rows: List[List[str]],
+    budget_row_classes: List[str] | None = None,
+) -> str:
+    styles = """
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+      h1 { font-size: 20px; margin-bottom: 8px; }
+      h2 { font-size: 16px; margin-top: 24px; }
+      table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; }
+      th { background: #f7f7f7; text-align: left; }
+      .kv { width: auto; }
+      .kv td:first-child { font-weight: 600; width: 220px; }
+      .muted { color: #666; }
+      /* Status coloring for budget table */
+      tr.status-ok { background: #e8f5e9; }      /* green */
+      tr.status-warn { background: #fff8e1; }    /* yellow */
+      tr.status-error { background: #ffebee; }   /* red */
+      .legend { font-size: 12px; color: #444; }
+      .legend span { display: inline-block; padding: 3px 6px; margin-right: 8px; border-radius: 3px; }
+      .legend .ok { background: #e8f5e9; }
+      .legend .warn { background: #fff8e1; }
+      .legend .err { background: #ffebee; }
+    </style>
+    """
+
+    # Overview as key-value table
+    ov_rows = [[k, v] for (k, v) in overview_items]
+    overview_html = _render_html_table(["Name", "Wert"], ov_rows).replace("<table>", "<table class=\"kv\">", 1)
+
+    vac_html = "<p class=\"muted\">Keine Einträge</p>" if not vacations else (
+        "<ul>" + "".join(f"<li>{_html_escape(v)}</li>" for v in vacations) + "</ul>"
+    )
+
+    parts = [
+        "<!DOCTYPE html>",
+        "<html lang=\"de\">",
+        "<head>",
+        "<meta charset=\"utf-8\">",
+        f"<title>{_html_escape(title)}</title>",
+        styles,
+        "</head>",
+        "<body>",
+        f"<h1>{_html_escape(title)}</h1>",
+        "<h2>Übersicht</h2>",
+        overview_html,
+        "<h2>Urlaube und Abwesenheiten</h2>",
+        vac_html,
+        "<h2>Projekte – Zeitraum, Tage, Kapazität</h2>",
+        _render_html_table(proj_summary_headers, proj_summary_rows),
+        "<h2>Geplante Kapazitäten je Projekt</h2>",
+        _render_html_table(cap_headers, cap_rows),
+        "<h2>Verteilung Stunden pro Projekt (Øh/Arbeitstag im Monat)</h2>",
+        _render_html_table(perday_headers, perday_rows),
+        "<h2>Erforderliche Øh/Arbeitstag je Monat (für 100%)</h2>",
+        _render_html_table(req_headers, req_rows),
+        "<h2>Genutzte Stunden je Projekt (Monat)</h2>",
+        _render_html_table(used_headers, used_rows),
+        "<h2>Ungenutzte Kapazität je Projekt (Monat)</h2>",
+        _render_html_table(unused_headers, unused_rows),
+        "<h2>Budgetverbrauch pro Projekt (h)</h2>",
+        "<div class=\"legend\"><span class=\"ok\">Grün: passt genau</span><span class=\"warn\">Gelb: Budget nicht voll verbraucht</span><span class=\"err\">Rot: Budget vor Projektende erschöpft</span></div>",
+        _render_html_table(budget_headers, budget_rows, row_classes=budget_row_classes or []),
+        "</body></html>",
     ]
-    month_headers: List[str] = []
-    if month_keys:
-        month_headers = [f"Tage {m}" for m in month_keys]
-    headers = base_headers + month_headers
-    out = []
-    out.append(";".join(headers))
-    for r in rows:
-        row_vals = [
-            str(r.get("Projekt", "")),
-            str(r.get("Zeitraum", "")),
-            str(r.get("Tage", "")),
-            format_number_de(r.get("Kapazität (h)"), 2),
-            format_number_de(r.get("ØKap/Tag"), 2),
-            format_number_de(r.get("Øh/Tag 100%"), 2),
-            format_number_de(r.get("Øh/Tag 90%"), 2),
-            format_number_de(r.get("Øh/Tag 80%"), 2),
-            format_number_de(r.get("Util 100%"), 2),
-            format_number_de(r.get("Util 90%"), 2),
-            format_number_de(r.get("Util 80%"), 2),
-            format_number_de(r.get("Umsatz 100%"), 2),
-            format_number_de(r.get("Umsatz 90%"), 2),
-            format_number_de(r.get("Umsatz 80%"), 2),
-        ]
-        for mh in month_headers:
-            val = r.get(mh)
-            row_vals.append(str(val if val is not None else ""))
-        out.append(";".join(row_vals))
-    return "\n".join(out)
+    return "\n".join(parts)

@@ -178,10 +178,12 @@ class Project:
     rest_budget_hours: float
     rate_eur_per_h: float
     weights_by_month: Dict[str, float] = field(default_factory=dict)
+    limits_by_month: Dict[str, float] = field(default_factory=dict)
 
     @staticmethod
     def from_dict(d: dict) -> "Project":
         weights = { _parse_month(k, f"projects.weights_by_month[{k}]"): float(v) for k, v in (d.get("weights_by_month") or {}).items() }
+        limits = { _parse_month(k, f"projects.limits_by_month[{k}]"): float(v) for k, v in (d.get("limits_by_month") or {}).items() }
         p = Project(
             name=str(d["name"]),
             start=_parse_date(d["start"], "projects.start"),
@@ -189,6 +191,7 @@ class Project:
             rest_budget_hours=float(d["rest_budget_hours"]),
             rate_eur_per_h=float(d["rate_eur_per_h"]),
             weights_by_month=weights,
+            limits_by_month=limits,
         )
         p.validate()
         return p
@@ -203,6 +206,9 @@ class Project:
         for m, w in self.weights_by_month.items():
             if w < 0 or w > 100:
                 raise ValueError(f"Projekt {self.name}: Gewicht {w} für Monat {m} außerhalb 0–100")
+        for m, lim in self.limits_by_month.items():
+            if lim < 0:
+                raise ValueError(f"Projekt {self.name}: Limit {lim}h für Monat {m} darf nicht negativ sein")
 
 
 @dataclass
