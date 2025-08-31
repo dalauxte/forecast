@@ -3,7 +3,7 @@ Forecast Planner – Kapazitäts- und Budgetplanung
 Kurzbeschreibung
 - Planungs-Tool, das verfügbare Kapazität (Arbeitstage × Stunden) monatsweise auf Projekte verteilt.
 - Projekte haben Restbudget (h), Stundensätze, Gewichte pro Monat (`weights_by_month`) und optional Limits pro Monat (`limits_by_month`).
-- Ausgabe als Tabelle im Terminal und als ausführlicher HTML-Bericht.
+- Ausgabe als Tabelle im Terminal und als ausführlicher HTML-Bericht mit Erklärtexten und Tooltips.
 - Live-Simulation im Browser: YAML links bearbeiten, Report rechts live sehen.
 
 Voraussetzungen
@@ -68,16 +68,30 @@ Monats-Limits (`limits_by_month`)
 HTML-Bericht (Sektionen)
 - Übersicht: Planungszeitraum, Anzahl Urlaub-/Feiertage, Gesamtkapazität, Anzahl Projekte.
 - Urlaube und Abwesenheiten: Liste der Urlaubstage/-zeiträume.
-- Projekte – Zeitraum, Tage, Kapazität: pro Projekt Gesamtkapazität, ØKap/Tag, Umsätze, Hinweise (z. B. “100% Ziel > Kap/Tag”).
-- Geplante Kapazitäten je Projekt: zugeteilte Stunden je Monat (nur Zuteilung, noch ohne Limits/Budget).
-- Verteilung Stunden pro Projekt (Øh/Arbeitstag im Monat): `zugeteilte Stunden / Arbeitstage (Projekt, Monat)`.
-- Erforderliche Øh/Arbeitstag je Monat (für 100%): Budget proportional zur Zuteilung auf Monate verteilt, dann durch Arbeitstage im Monat geteilt.
-- Genutzte Stunden je Projekt (Monat): tatsächlich genutzte Stunden mit Limits/Budget berücksichtigt.
-- Ungenutzte Kapazität je Projekt (Monat): Differenz aus Zuteilung und Nutzung.
+- Projekte – Zeitraum, Tage, Kapazität: pro Projekt Gesamtkapazität, Genutzt (mit Limits/Budget), Ungenutzt, Restbudget, Umsätze, Hinweise (z. B. “100% Ziel > Kap/Tag”).
+- Geplante Kapazitäten je Projekt: zugeteilte Stunden je Monat (nur Zuteilung, noch ohne Limits/Budget). Spalten besitzen Tooltips.
+- Verteilung Stunden pro Projekt (Øh/Arbeitstag im Monat): `Zuteilung / Arbeitstage (Projekt, Monat)`; mit Tooltips je Monat.
+- Erforderliche Øh/Arbeitstag je Monat (für 100%): Budget proportional zur Zuteilung auf Monate verteilt, dann durch Arbeitstage im Monat geteilt (siehe Formeln unten). Mit Tooltips je Monat.
+- Genutzte Stunden je Projekt (Monat): tatsächlich genutzte Stunden mit Limits/Budget berücksichtigt. Mit Tooltips.
+- Ungenutzte Kapazität je Projekt (Monat): Differenz aus Zuteilung und Nutzung (verfallene Kapazität). Mit Tooltips.
 - Budgetverbrauch pro Projekt (h): monatsweise Budgetnutzung mit Statusfarbe
   - Grün: Budget exakt im letzten aktiven Monat verbraucht
   - Gelb: Restbudget verbleibt am Ende
   - Rot: Budget vor dem letzten aktiven Monat erschöpft
+  - Legende und Tooltips enthalten
+
+Formeln (Berechnungsgrundlagen)
+- Zuteilung je Monat: `assigned(p, m)` aus Gewichten und Kapazität.
+- Summe Zuteilung: `A_total = Σ_m assigned(p, m)` (über aktive Monate).
+- Budgetanteil je Monat: `B_m = rest_budget_hours × (assigned(p, m) / A_total)` (0, wenn `A_total = 0`).
+- Arbeitstage je Monat: `D_m` (Werktage ohne Feiertage/Urlaub im Projektzeitraum).
+- Erforderlicher Ø/Tag: `need_avg_m = B_m / D_m` (0, wenn `D_m = 0`).
+- Genutzt je Monat (mit Limits/Budget): `used(p, m) = min(assigned(p, m), limit(p, m) falls gesetzt, remaining_budget(p))`, dabei `remaining_budget` monatlich fortgeschrieben.
+- Ungenutzt je Monat: `unused(p, m) = assigned(p, m) − used(p, m)` (nicht negativ).
+- Budgetstatus (Ampel):
+  - Grün: Restbudget am Projektende ~0 und Erschöpfung im letzten aktiven Monat
+  - Gelb: Restbudget > 0 am Projektende
+  - Rot: Restbudget ~0, aber Erschöpfung vor letztem aktiven Monat
 
 CLI-Optionen (Auszug)
 - `--config`: Pfad zur YAML-Datei (Default: `config/config.yml` falls vorhanden)
@@ -96,6 +110,7 @@ Live-Simulation (Browser)
 - Start: `PYTHONPATH=src python3 -m forecast.server`
 - Linke Seite: YAML editieren (vorbefüllt mit `config/config.yml`, sofern vorhanden)
 - Rechte Seite: Bericht wird bei Änderungen automatisch neu gerendert (oder per Button)
+- Fehler werden links unter dem Editor angezeigt. Rendering verwendet identische Berechnungen wie die CLI.
 
 Beispielberichte
 - Siehe `doc/example/example report.md` für Strukturideen eines Berichts.

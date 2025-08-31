@@ -96,8 +96,13 @@ def _html_escape(s: str) -> str:
     )
 
 
-def _render_html_table(headers: List[str], rows: List[List[str]], row_classes: List[str] | None = None) -> str:
-    ths = "".join(f"<th>{_html_escape(h)}</th>" for h in headers)
+def _render_html_table(headers, rows: List[List[str]], row_classes: List[str] | None = None) -> str:
+    def _th(h):
+        if isinstance(h, tuple) and len(h) == 2:
+            label, title = h
+            return f"<th title=\"{_html_escape(str(title))}\">{_html_escape(str(label))}</th>"
+        return f"<th>{_html_escape(str(h))}</th>"
+    ths = "".join(_th(h) for h in headers)
     trs = []
     for idx, r in enumerate(rows):
         tds = "".join(f"<td>{_html_escape(str(v))}</td>" for v in r)
@@ -140,6 +145,7 @@ def export_html_page(
       .kv { width: auto; }
       .kv td:first-child { font-weight: 600; width: 220px; }
       .muted { color: #666; }
+      .desc { color: #444; font-size: 13px; margin: 0 0 8px; }
       /* Status coloring for budget table */
       tr.status-ok { background: #e8f5e9; }      /* green */
       tr.status-warn { background: #fff8e1; }    /* yellow */
@@ -170,23 +176,42 @@ def export_html_page(
         "</head>",
         "<body>",
         f"<h1>{_html_escape(title)}</h1>",
+        "<h2>Hilfe</h2>",
+        "<p class=\"desc\">Kurze Erläuterungen zu Begriffen und Berechnungen.</p>",
+        "<ul class=\"desc\">"
+        "<li><strong>Zuteilung (Kapazität)</strong>: Verfügbarkeit, die monatsweise per <em>weights_by_month</em> auf Projekte verteilt wird.</li>"
+        "<li><strong>Genutzt</strong>: Tatsächlich verwendete Stunden je Monat: min(Zuteilung, Monats-Limit, verbleibendes Budget).</li>"
+        "<li><strong>Ungenutzt</strong>: Zuteilung − Genutzt im Monat (verfällt für das Projekt).</li>"
+        "<li><strong>Ø/Tag (Zuteilung)</strong>: Zuteilung im Monat geteilt durch Arbeitstage des Projekts in diesem Monat.</li>"
+        "<li><strong>Erforderlicher Ø/Tag</strong>: Budget proportional zur Zuteilung auf Monate verteilt, dann durch Arbeitstage geteilt.</li>"
+        "<li><strong>Status</strong>: Grün = Budget exakt am Projektende verbraucht; Gelb = Restbudget bleibt; Rot = Budget vor Projektende erschöpft.</li>"
+        "</ul>",
         "<h2>Übersicht</h2>",
+        "<p class=\"desc\">Kompakte Kennzahlen zum Planungszeitraum: Arbeitstage, Gesamt-\nKapazität sowie Verteilung auf Projekte (zugewiesen/genutzt/ungenutzt)\nund Zahl der Projekte nach Status.</p>",
         overview_html,
         "<h2>Urlaube und Abwesenheiten</h2>",
+        "<p class=\"desc\">Auflistung aller hinterlegten Urlaubs- und Abwesenheitstage im\nPlanungszeitraum. Diese Tage reduzieren die verfügbaren Arbeitstage\nund damit die Kapazität.</p>",
         vac_html,
         "<h2>Projekte – Zeitraum, Tage, Kapazität</h2>",
+        "<p class=\"desc\">Pro Projekt: aktiver Zeitraum, Anzahl Arbeitstage, gesamte zugewiesene\nKapazität, tatsächlich genutzte Stunden (unter Limits/Budget),\nungenutzte Stunden, verbleibendes Budget und erwartete Umsätze.</p>",
         _render_html_table(proj_summary_headers, proj_summary_rows),
         "<h2>Geplante Kapazitäten je Projekt</h2>",
+        "<p class=\"desc\">Zuteilung nach Monaten auf Basis der Gewichte (weights_by_month).\nDiese Werte zeigen die geplante Verfügbarkeit, noch ohne Limits/Budget.</p>",
         _render_html_table(cap_headers, cap_rows),
         "<h2>Verteilung Stunden pro Projekt (Øh/Arbeitstag im Monat)</h2>",
+        "<p class=\"desc\">Durchschnittliche tägliche Zuteilung im jeweiligen Monat:\nZuteilung (h) geteilt durch Arbeitstage des Projekts in diesem Monat.</p>",
         _render_html_table(perday_headers, perday_rows),
         "<h2>Erforderliche Øh/Arbeitstag je Monat (für 100%)</h2>",
+        "<p class=\"desc\">Notwendiger täglicher Durchschnitt, damit das Projektbudget bis zum\nProjektende aufgeht. Das Budget wird proportional zur Zuteilung auf\nMonate verteilt und durch die jeweiligen Arbeitstage geteilt.</p>",
         _render_html_table(req_headers, req_rows),
         "<h2>Genutzte Stunden je Projekt (Monat)</h2>",
+        "<p class=\"desc\">Reale Nutzung je Monat unter Berücksichtigung von Monats-Limits und\nRestbudget: min(Zuteilung, Limit, verbleibendes Budget).</p>",
         _render_html_table(used_headers, used_rows),
         "<h2>Ungenutzte Kapazität je Projekt (Monat)</h2>",
+        "<p class=\"desc\">Zuteilung minus Nutzung: zeigt, welche Kapazität für das Projekt im\nMonat verfallen ist (z. B. durch Limits).</p>",
         _render_html_table(unused_headers, unused_rows),
         "<h2>Budgetverbrauch pro Projekt (h)</h2>",
+        "<p class=\"desc\">Monatlicher Budget-Burn. Status: Grün = Budget exakt am Projektende\nverbraucht; Gelb = Restbudget bleibt; Rot = Budget vor Projektende\nerreicht 0.</p>",
         "<div class=\"legend\"><span class=\"ok\">Grün: passt genau</span><span class=\"warn\">Gelb: Budget nicht voll verbraucht</span><span class=\"err\">Rot: Budget vor Projektende erschöpft</span></div>",
         _render_html_table(budget_headers, budget_rows, row_classes=budget_row_classes or []),
         "</body></html>",

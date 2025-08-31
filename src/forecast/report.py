@@ -106,6 +106,8 @@ def create_html_report(cfg: Config) -> str:
     hols_in_period = [d for d in hols if planning_period[0] <= d <= planning_period[1] and d.weekday() < 5]
     vac_in_period = [d for d in cfg.calendar.vacation_days if planning_period[0] <= d <= planning_period[1]]
     sum_capacity = sum(capacity_by_date.values())
+    # Precompute used/unused totals per project for KPIs
+    # assigned computed later; for overview we fill after assigned is known
     overview_items = [
         ("Planungszeitraum", f"{planning_period[0]} – {planning_period[1]}"),
         ("∑ Urlaubstage", str(len(vac_in_period))),
@@ -152,7 +154,7 @@ def create_html_report(cfg: Config) -> str:
         )
 
     # Capacities table
-    cap_headers = ["Projekt"] + all_months
+    cap_headers = [("Projekt", "Projektname")] + [(mk, f"Zugewiesene Stunden im Monat {mk} (per Gewichten)") for mk in all_months]
     cap_rows: List[List[str]] = []
     for r in results:
         row = [r.name]
@@ -162,7 +164,7 @@ def create_html_report(cfg: Config) -> str:
         cap_rows.append(row)
 
     # Per-day assigned avg
-    perday_headers = ["Projekt"] + all_months
+    perday_headers = [("Projekt", "Projektname")] + [(mk, f"Ø/Tag aus Zuteilung in {mk} (Zuteilung/Arbeitstage)") for mk in all_months]
     perday_rows: List[List[str]] = []
     for r in results:
         month_counts: Dict[str, int] = {}
@@ -178,7 +180,7 @@ def create_html_report(cfg: Config) -> str:
         perday_rows.append(row)
 
     # Required per-day avg to use full budget by end
-    req_headers = ["Projekt"] + all_months
+    req_headers = [("Projekt", "Projektname")] + [(mk, f"Erforderlicher Ø/Tag für 100% in {mk}") for mk in all_months]
     req_rows: List[List[str]] = []
     for r in results:
         month_counts: Dict[str, int] = {}
@@ -214,9 +216,9 @@ def create_html_report(cfg: Config) -> str:
             used_by_project_month[(r.name, mk)] = use
             remaining = max(0.0, remaining - use)
 
-    used_headers = ["Projekt"] + all_months
+    used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzte Stunden in {mk} (mit Limits/Budget)") for mk in all_months]
     used_rows: List[List[str]] = []
-    unused_headers = ["Projekt"] + all_months
+    unused_headers = [("Projekt", "Projektname")] + [(mk, f"Ungenutzte Kapazität in {mk} (Zuteilung−Nutzung)") for mk in all_months]
     unused_rows: List[List[str]] = []
     for r in results:
         row_used = [r.name]
@@ -230,7 +232,7 @@ def create_html_report(cfg: Config) -> str:
         unused_rows.append(row_unused)
 
     # Budget consumption rows (reuse used_by_project_month)
-    budget_headers = ["Projekt"] + all_months + ["Restbudget (h)", "Status"]
+    budget_headers = [("Projekt", "Projektname")] + [(mk, f"Budgetverbrauch in {mk}") for mk in all_months] + [("Restbudget (h)", "Verbleibendes Budget am Projektende"), ("Status", "Budgetstatus zum Projektende")]
     budget_rows: List[List[str]] = []
     budget_row_classes: List[str] = []
     for r in results:
@@ -265,6 +267,75 @@ def create_html_report(cfg: Config) -> str:
         budget_rows.append(row)
         budget_row_classes.append(status)
 
+    # Enhance overview with totals (assigned/used/unused) and project status counts
+    total_assigned_all = sum(assigned.get((r.name, mk), 0.0) for r in results for mk in all_months)
+    total_used_all = sum(used_by_project_month.get((r.name, mk), 0.0) for r in results for mk in all_months)
+    total_unused_all = max(0.0, total_assigned_all - total_used_all)
+    overview_items.extend([
+        ("∑ Zugewiesen (h)", format_number_de(total_assigned_all, 2)),
+        ("∑ Genutzt (h)", format_number_de(total_used_all, 2)),
+        ("∑ Ungenutzt (h)", format_number_de(total_unused_all, 2)),
+    ])
+
+    status_counts = {"ok": 0, "warn": 0, "error": 0}
+    for cls in budget_row_classes:
+        if cls == "status-ok":
+            status_counts["ok"] += 1
+        elif cls == "status-warn":
+            status_counts["warn"] += 1
+        elif cls == "status-error":
+            status_counts["error"] += 1
+    overview_items.extend([
+        ("Projekte (grün)", str(status_counts["ok"])),
+        ("Projekte (gelb)", str(status_counts["warn"])),
+        ("Projekte (rot)", str(status_counts["error"])),
+    ])
+
+    # Add portfolio-level aggregates per project: used/unused and remaining budget columns
+    # Extend proj_summary_headers and rows accordingly
+    # We reconstruct with additional columns
+    new_headers = [
+        ("Projekt", "Projektname"),
+        ("Zeitraum", "Aktiver Zeitraum innerhalb der Planung"),
+        ("Tage", "Arbeitstage des Projekts im Zeitraum"),
+        ("Kapazität (h)", "Summe zugeteilter Stunden über den Zeitraum"),
+        ("Genutzt (h)", "Summe tatsächlich genutzter Stunden (mit Limits/Budget)"),
+        ("Ungenutzt (h)", "Summe nicht genutzter Zuteilung (verfallen)"),
+        ("Restbudget (h)", "Verbleibendes Projektbudget nach Nutzung"),
+        ("Umsatz 100%", "Budget × Satz"),
+        ("Umsatz 90%", "90% von Budget × Satz"),
+        ("Umsatz 80%", "80% von Budget × Satz"),
+        ("Hinweise", "Wichtige Hinweise zur Auslastung"),
+    ]
+    new_rows: List[List[str]] = []
+    for row in proj_summary_rows:
+        name = row[0]
+        assigned_total = 0.0
+        used_total = 0.0
+        for mk in all_months:
+            assigned_total += assigned.get((name, mk), 0.0)
+            used_total += used_by_project_month.get((name, mk), 0.0)
+        unused_total = max(0.0, assigned_total - used_total)
+        rproj = next((rr for rr in results if rr.name == name), None)
+        rest_remaining = (rproj.rest_budget_hours if rproj else 0.0) - used_total
+        rest_remaining = max(0.0, rest_remaining)
+
+        new_rows.append([
+            row[0],
+            row[1],
+            row[2],
+            format_number_de(assigned_total, 2),
+            format_number_de(used_total, 2),
+            format_number_de(unused_total, 2),
+            format_number_de(rest_remaining, 2),
+            row[4],  # Umsatz 100%
+            row[5],  # Umsatz 90%
+            row[6],  # Umsatz 80%
+            row[7],  # Hinweise
+        ])
+    proj_summary_headers = new_headers
+    proj_summary_rows = new_rows
+
     vacations_fmt = [str(d) for d in sorted(vac_in_period)]
     html = export_html_page(
         title="Forecast – Bericht",
@@ -287,4 +358,3 @@ def create_html_report(cfg: Config) -> str:
         budget_row_classes=budget_row_classes,
     )
     return html
-
