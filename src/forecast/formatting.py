@@ -128,11 +128,10 @@ def export_html_page(
     req_rows: List[List[str]],
     used_headers: List[str],
     used_rows: List[List[str]],
-    unused_headers: List[str],
-    unused_rows: List[List[str]],
     budget_headers: List[str],
     budget_rows: List[List[str]],
     budget_row_classes: List[str] | None = None,
+    monthly_stack_chart_html: str | None = None,
 ) -> str:
     styles = """
     <style>
@@ -155,6 +154,13 @@ def export_html_page(
       .legend .ok { background: #e8f5e9; }
       .legend .warn { background: #fff8e1; }
       .legend .err { background: #ffebee; }
+      /* Stacked chart */
+      .chart { margin: 12px 0; }
+      .chart .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+      .chart .label { width: 90px; font-size: 12px; color: #333; }
+      .chart .bar { flex: 1; display: flex; height: 16px; background: #f1f1f1; border: 1px solid #e0e0e0; }
+      .chart .seg { height: 100%; }
+      .legend .swatch { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 6px; border: 1px solid #ddd; }
     </style>
     """
 
@@ -207,9 +213,9 @@ def export_html_page(
         "<h2>Genutzte Stunden je Projekt (Monat)</h2>",
         "<p class=\"desc\">Reale Nutzung je Monat unter Berücksichtigung von Monats-Limits und\nRestbudget: min(Zuteilung, Limit, verbleibendes Budget).</p>",
         _render_html_table(used_headers, used_rows),
-        "<h2>Ungenutzte Kapazität je Projekt (Monat)</h2>",
-        "<p class=\"desc\">Zuteilung minus Nutzung: zeigt, welche Kapazität für das Projekt im\nMonat verfallen ist (z. B. durch Limits).</p>",
-        _render_html_table(unused_headers, unused_rows),
+        "<h2>Kapazitätsnutzung je Monat (gestapelt)</h2>",
+        "<p class=\"desc\">Gesamtkapazität pro Monat mit den genutzten Anteilen je Projekt und dem verbleibenden Rest (nicht genutzt/zugewiesen).</p>",
+        (monthly_stack_chart_html or '<p class="muted">Keine Daten</p>'),
         "<h2>Budgetverbrauch pro Projekt (h)</h2>",
         "<p class=\"desc\">Monatlicher Budget-Burn. Status: Grün = Budget exakt am Projektende\nverbraucht; Gelb = Restbudget bleibt; Rot = Budget vor Projektende\nerreicht 0.</p>",
         "<div class=\"legend\"><span class=\"ok\">Grün: passt genau</span><span class=\"warn\">Gelb: Budget nicht voll verbraucht</span><span class=\"err\">Rot: Budget vor Projektende erschöpft</span></div>",

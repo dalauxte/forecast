@@ -8,7 +8,7 @@ from .calendar import intersection, workdays_in_period, month_key, niedersachsen
 from .capacity import compute_capacity_by_date, aggregate_capacity_by_month
 from .weights import assign_capacity_by_project_month
 from .compute import compute_results
-from .formatting import export_html_page, format_number_de, format_currency_eur
+from .formatting import export_html_page, format_number_de, format_currency_eur, _html_escape
 
 
 def create_html_report(cfg: Config) -> str:
@@ -218,18 +218,44 @@ def create_html_report(cfg: Config) -> str:
 
     used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzte Stunden in {mk} (mit Limits/Budget)") for mk in all_months]
     used_rows: List[List[str]] = []
-    unused_headers = [("Projekt", "Projektname")] + [(mk, f"Ungenutzte Kapazität in {mk} (Zuteilung−Nutzung)") for mk in all_months]
-    unused_rows: List[List[str]] = []
     for r in results:
         row_used = [r.name]
-        row_unused = [r.name]
         for mk in all_months:
             a = assigned.get((r.name, mk), 0.0)
             u = used_by_project_month.get((r.name, mk), 0.0)
             row_used.append(format_number_de(u, 2))
-            row_unused.append(format_number_de(max(0.0, a - u), 2))
         used_rows.append(row_used)
-        unused_rows.append(row_unused)
+    
+    # Build monthly stacked chart HTML
+    proj_names = [r.name for r in results]
+    def color_for(idx: int) -> str:
+        hue = (idx * 67) % 360
+        return f"hsl({hue}, 65%, 55%)"
+    legend_items = []
+    for i, name in enumerate(proj_names):
+        legend_items.append(f"<span class=\"swatch\" style=\"background:{color_for(i)}\"></span>{_html_escape(name)}")
+    legend_items.append("<span class=\"swatch\" style=\"background:#cccccc\"></span>Rest")
+    chart_rows = []
+    for mk in all_months:
+        total = float(capacity_by_month.get(mk, 0.0))
+        segs = []
+        used_sum = 0.0
+        for i, name in enumerate(proj_names):
+            u = float(used_by_project_month.get((name, mk), 0.0))
+            used_sum += u
+            width = 0 if total <= 0 else max(0.0, (u / total) * 100.0)
+            segs.append(f"<div class=\"seg\" title=\"{_html_escape(name)}: {format_number_de(u,2)} h\" style=\"width:{width:.4f}%;background:{color_for(i)}\"></div>")
+        rest = max(0.0, total - used_sum)
+        rest_w = 0 if total <= 0 else max(0.0, (rest / total) * 100.0)
+        if rest_w > 0:
+            segs.append(f"<div class=\"seg\" title=\"Rest: {format_number_de(rest,2)} h\" style=\"width:{rest_w:.4f}%;background:#cccccc\"></div>")
+        chart_rows.append(f"<div class=\"row\"><div class=\"label\">{_html_escape(mk)}</div><div class=\"bar\">{''.join(segs)}</div><div class=\"label\">{format_number_de(total,2)} h</div></div>")
+    monthly_stack_chart_html = "".join([
+        "<div class=\"chart\">",
+        "<div class=\"legend\">" + " &nbsp; ".join(legend_items) + "</div>",
+        "".join(chart_rows),
+        "</div>",
+    ])
 
     # Budget consumption rows (reuse used_by_project_month)
     budget_headers = [("Projekt", "Projektname")] + [(mk, f"Budgetverbrauch in {mk}") for mk in all_months] + [("Restbudget (h)", "Verbleibendes Budget am Projektende"), ("Status", "Budgetstatus zum Projektende")]
@@ -351,8 +377,7 @@ def create_html_report(cfg: Config) -> str:
         req_rows=req_rows,
         used_headers=used_headers,
         used_rows=used_rows,
-        unused_headers=unused_headers,
-        unused_rows=unused_rows,
+        monthly_stack_chart_html=monthly_stack_chart_html,
         budget_headers=budget_headers,
         budget_rows=budget_rows,
         budget_row_classes=budget_row_classes,
