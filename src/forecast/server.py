@@ -40,18 +40,12 @@ INDEX_HTML = r"""<!DOCTYPE html>
     .bar .actions { display: flex; gap: 6px; }
     button { padding: 6px 10px; }
     .editor { position: relative; flex: 1; }
-    .editor textarea, .editor pre.hl {
+    .editor textarea {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.4;
       width: 100%; height: 100%; box-sizing: border-box; margin: 0;
       padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px;
+      background: #fff; color: #111; caret-color: #111; resize: none;
     }
-    .editor pre.hl { position: absolute; inset: 0; color: #222; background: #fafafa; overflow: auto; pointer-events: none; white-space: pre-wrap; word-wrap: break-word; }
-    .editor textarea { position: relative; background: transparent; color: transparent; caret-color: #111; resize: none; }
-    .hl .key { color: #1565c0; font-weight: 600; }
-    .hl .str { color: #2e7d32; }
-    .hl .num { color: #ad1457; }
-    .hl .bool { color: #6a1b9a; }
-    .hl .cmt { color: #777; }
     iframe { width: 100%; height: 100%; border: 0; }
     .err { color: #b00020; font-size: 12px; white-space: pre-wrap; }
   </style>
@@ -64,24 +58,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
       root.style.setProperty('--left', val);
       localStorage.setItem('splitLeft', val);
     }
-    function highlightYAML(text) {
-      // Escape HTML with broad browser support (avoid replaceAll)
-      let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      s = s.replace(/(^|\n)([ \t]*#.*)/g, (m, p1, p2) => p1 + '<span class=\\"cmt\\">' + p2 + '</span>');
-      s = s.replace(/(\"[^\"]*\"|\'[^\']*\')/g, '<span class=\\"str\\">$1</span>');
-      s = s.replace(/(^|\n)([ \t]*)([A-Za-z0-9_\-\.]+)(\s*):/g, (m, p1, p2, p3, p4) => p1 + p2 + '<span class=\\"key\\">' + p3 + '</span>' + p4 + ':');
-      s = s.replace(/(:\s+|\-\s+)(true|false|null)\b/g, '$1<span class=\\"bool\\">$2</span>');
-      s = s.replace(/(:\s+|\-\s+)([\-+]?[0-9]+(\.[0-9]+)?)/g, '$1<span class=\\"num\\">$2</span>');
-      return s;
-    }
-    function syncHighlight() {
-      const ta = document.getElementById('yaml');
-      const hl = document.getElementById('hl');
-      if (!ta || !hl) return;
-      hl.innerHTML = highlightYAML(ta.value);
-      hl.scrollTop = ta.scrollTop;
-      hl.scrollLeft = ta.scrollLeft;
-    }
+    // No syntax highlighting to ensure broad compatibility
     async function renderNow() {
       const ta = document.getElementById('yaml');
       const out = document.getElementById('out');
@@ -101,7 +78,6 @@ INDEX_HTML = r"""<!DOCTYPE html>
     }
     function onInput() {
       if (timer) clearTimeout(timer);
-      syncHighlight();
       timer = setTimeout(renderNow, 400);
     }
     window.addEventListener('load', () => {
@@ -110,11 +86,27 @@ INDEX_HTML = r"""<!DOCTYPE html>
       root.style.setProperty('--left', saved || '35%');
 
       const ta = document.getElementById('yaml');
-      const hl = document.getElementById('hl');
       ta.addEventListener('input', onInput);
-      ta.addEventListener('scroll', () => { hl.scrollTop = ta.scrollTop; hl.scrollLeft = ta.scrollLeft; });
       document.getElementById('btn').addEventListener('click', renderNow);
       const reset = document.getElementById('reset'); if (reset) reset.addEventListener('click', () => setSplit(35));
+      // Highlighting toggle
+      const leftPane = document.querySelector('.left');
+      const hlToggle = document.getElementById('toggle-hl');
+      const savedHL = localStorage.getItem('hlEnabled');
+      if (savedHL === '1') { leftPane.classList.add('hl-on'); }
+      if (hlToggle) {
+        hlToggle.checked = leftPane.classList.contains('hl-on');
+        hlToggle.addEventListener('change', () => {
+          if (hlToggle.checked) {
+            leftPane.classList.add('hl-on');
+            localStorage.setItem('hlEnabled', '1');
+            syncHighlight();
+          } else {
+            leftPane.classList.remove('hl-on');
+            localStorage.setItem('hlEnabled', '0');
+          }
+        });
+      }
 
       // Drag to resize
       const drag = document.getElementById('drag');
@@ -137,7 +129,6 @@ INDEX_HTML = r"""<!DOCTYPE html>
         if (e.key === 'ArrowRight') { setSplit(cur + 1); e.preventDefault(); }
       });
 
-      syncHighlight();
       renderNow();
     });
   </script>
@@ -147,10 +138,13 @@ INDEX_HTML = r"""<!DOCTYPE html>
     <div class="left">
       <div class="bar">
         <strong>YAML-Konfiguration</strong>
-        <span class="actions"><button id="btn">Neu rendern</button><button id="reset" title="Reset auf 35%">Reset</button></span>
+        <span class="actions">
+          <label style="font-weight:normal; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><input type="checkbox" id="toggle-hl"> Highlighting</label>
+          <button id="btn">Neu rendern</button>
+          <button id="reset" title="Reset auf 35%">Reset</button>
+        </span>
       </div>
       <div class="editor">
-        <pre id="hl" class="hl"></pre>
         <textarea id="yaml">{YAML}</textarea>
       </div>
       <div id="err" class="err"></div>
