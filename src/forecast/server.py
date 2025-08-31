@@ -30,17 +30,57 @@ INDEX_HTML = """<!DOCTYPE html>
   <title>Forecast – Live</title>
   <style>
     html, body { height: 100%; margin: 0; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    .wrap { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
-    .left { padding: 12px; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-    .right { height: 100%; }
-    textarea { flex: 1; width: 100%; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
-    .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    :root { --left: 35%; }
+    .wrap { display: flex; height: 100%; }
+    .left { width: var(--left); min-width: 240px; padding: 12px; border-right: 1px solid #ddd; display: flex; flex-direction: column; box-sizing: border-box; }
+    .drag { width: 6px; cursor: col-resize; background: #f5f5f5; border-right: 1px solid #e0e0e0; border-left: 1px solid #e0e0e0; }
+    .right { flex: 1; height: 100%; }
+    textarea { flex: 1; width: 100%; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; box-sizing: border-box; }
+    .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+    .bar .actions { display: flex; gap: 6px; }
     button { padding: 6px 10px; }
+    .editor { position: relative; flex: 1; }
+    .editor textarea, .editor pre.hl {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.4;
+      width: 100%; height: 100%; box-sizing: border-box; margin: 0;
+      padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px;
+    }
+    .editor pre.hl { position: absolute; inset: 0; color: #222; background: #fafafa; overflow: auto; pointer-events: none; white-space: pre; }
+    .editor textarea { position: relative; background: transparent; color: #111; resize: none; }
+    .hl .key { color: #1565c0; font-weight: 600; }
+    .hl .str { color: #2e7d32; }
+    .hl .num { color: #ad1457; }
+    .hl .bool { color: #6a1b9a; }
+    .hl .cmt { color: #777; }
     iframe { width: 100%; height: 100%; border: 0; }
     .err { color: #b00020; font-size: 12px; white-space: pre-wrap; }
   </style>
   <script>
     let timer = null;
+    function clampSplit(p) { return Math.max(20, Math.min(80, p)); }
+    function setSplit(pct) {
+      const root = document.documentElement;
+      const val = clampSplit(pct).toFixed(1) + '%';
+      root.style.setProperty('--left', val);
+      localStorage.setItem('splitLeft', val);
+    }
+    function highlightYAML(text) {
+      let s = text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+      s = s.replace(/(^|\n)([ \t]*#.*)/g, (m, p1, p2) => p1 + '<span class=\\"cmt\\">' + p2 + '</span>');
+      s = s.replace(/(\"[^\"]*\"|\'[^\']*\')/g, '<span class=\\"str\\">$1</span>');
+      s = s.replace(/(^|\n)([ \t]*)([A-Za-z0-9_\-\.]+)(\s*):/g, (m, p1, p2, p3, p4) => p1 + p2 + '<span class=\\"key\\">' + p3 + '</span>' + p4 + ':');
+      s = s.replace(/(:\s+|\-\s+)(true|false|null)\b/g, '$1<span class=\\"bool\\">$2</span>');
+      s = s.replace(/(:\s+|\-\s+)([\-+]?[0-9]+(\.[0-9]+)?)/g, '$1<span class=\\"num\\">$2</span>');
+      return s;
+    }
+    function syncHighlight() {
+      const ta = document.getElementById('yaml');
+      const hl = document.getElementById('hl');
+      if (!ta || !hl) return;
+      hl.innerHTML = highlightYAML(ta.value);
+      hl.scrollTop = ta.scrollTop;
+      hl.scrollLeft = ta.scrollLeft;
+    }
     async function renderNow() {
       const ta = document.getElementById('yaml');
       const out = document.getElementById('out');
@@ -60,25 +100,61 @@ INDEX_HTML = """<!DOCTYPE html>
     }
     function onInput() {
       if (timer) clearTimeout(timer);
+      syncHighlight();
       timer = setTimeout(renderNow, 400);
     }
     window.addEventListener('load', () => {
-      document.getElementById('yaml').addEventListener('input', onInput);
+      const root = document.documentElement;
+      const saved = localStorage.getItem('splitLeft');
+      root.style.setProperty('--left', saved || '35%');
+
+      const ta = document.getElementById('yaml');
+      const hl = document.getElementById('hl');
+      ta.addEventListener('input', onInput);
+      ta.addEventListener('scroll', () => { hl.scrollTop = ta.scrollTop; hl.scrollLeft = ta.scrollLeft; });
       document.getElementById('btn').addEventListener('click', renderNow);
+      const reset = document.getElementById('reset'); if (reset) reset.addEventListener('click', () => setSplit(35));
+
+      // Drag to resize
+      const drag = document.getElementById('drag');
+      const wrap = document.getElementById('wrap');
+      let dragging = false;
+      drag.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); });
+      window.addEventListener('mouseup', () => { dragging = false; });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const rect = wrap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const pct = (x / rect.width) * 100;
+        setSplit(pct);
+      });
+      // Keyboard resize: Alt + ArrowLeft/Right
+      window.addEventListener('keydown', (e) => {
+        if (!e.altKey) return;
+        const cur = parseFloat(getComputedStyle(root).getPropertyValue('--left')) || 35;
+        if (e.key === 'ArrowLeft') { setSplit(cur - 1); e.preventDefault(); }
+        if (e.key === 'ArrowRight') { setSplit(cur + 1); e.preventDefault(); }
+      });
+
+      syncHighlight();
       renderNow();
     });
   </script>
 </head>
 <body>
-  <div class="wrap">
+  <div id="wrap" class="wrap">
     <div class="left">
       <div class="bar">
         <strong>YAML-Konfiguration</strong>
-        <button id="btn">Neu rendern</button>
+        <span class="actions"><button id="btn">Neu rendern</button><button id="reset" title="Reset auf 35%">Reset</button></span>
       </div>
-      <textarea id="yaml">{YAML}</textarea>
+      <div class="editor">
+        <pre id="hl" class="hl"></pre>
+        <textarea id="yaml">{YAML}</textarea>
+      </div>
       <div id="err" class="err"></div>
     </div>
+    <div id="drag" class="drag" title="Ziehen zum Anpassen"></div>
     <div class="right">
       <iframe id="out"></iframe>
     </div>
@@ -141,4 +217,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

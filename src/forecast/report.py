@@ -219,13 +219,25 @@ def create_html_report(cfg: Config) -> str:
 
     used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzte Stunden in {mk} (mit Limits/Budget)") for mk in all_months]
     used_rows: List[List[str]] = []
+    used_perday_headers = [("Projekt", "Projektname")] + [(mk, f"Ø genutzte h/Arbeitstag in {mk}") for mk in all_months]
+    used_perday_rows: List[List[str]] = []
     for r in results:
         row_used = [r.name]
+        row_used_perday = [r.name]
+        # count project workdays per month
+        month_counts: Dict[str, int] = {}
+        for d in workdays_by_project.get(r.name, []):
+            mk = month_key(d)
+            month_counts[mk] = month_counts.get(mk, 0) + 1
         for mk in all_months:
             a = assigned.get((r.name, mk), 0.0)
             u = used_by_project_month.get((r.name, mk), 0.0)
             row_used.append(format_number_de(u, 2))
+            days = month_counts.get(mk, 0)
+            avg_u = (u / days) if days > 0 else 0.0
+            row_used_perday.append(format_number_de(avg_u, 2))
         used_rows.append(row_used)
+        used_perday_rows.append(row_used_perday)
     
     # Build monthly stacked chart HTML
     proj_names = [r.name for r in results]
@@ -439,6 +451,8 @@ def create_html_report(cfg: Config) -> str:
         req_rows=req_rows,
         used_headers=used_headers,
         used_rows=used_rows,
+        used_perday_headers=used_perday_headers,
+        used_perday_rows=used_perday_rows,
         monthly_stack_chart_html=monthly_stack_chart_html,
         monthly_project_chart_html=monthly_project_chart_html,
         budget_headers=budget_headers,
