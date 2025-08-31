@@ -154,7 +154,7 @@ def create_html_report(cfg: Config) -> str:
         )
 
     # Capacities table
-    cap_headers = [("Projekt", "Projektname")] + [(mk, f"Zugewiesene Stunden im Monat {mk} (per Gewichten)") for mk in all_months]
+    cap_headers = [("Projekt", "Projektname")] + [(mk, f"Zugewiesen {mk} (h)") for mk in all_months]
     cap_rows: List[List[str]] = []
     for r in results:
         row = [r.name]
@@ -164,7 +164,7 @@ def create_html_report(cfg: Config) -> str:
         cap_rows.append(row)
 
     # Per-day assigned avg
-    perday_headers = [("Projekt", "Projektname")] + [(mk, f"Ø/Tag aus Zuteilung in {mk} (Zuteilung/Arbeitstage)") for mk in all_months]
+    perday_headers = [("Projekt", "Projektname")] + [(mk, f"Ø Zuteilung {mk} (h/d)") for mk in all_months]
     perday_rows: List[List[str]] = []
     for r in results:
         month_counts: Dict[str, int] = {}
@@ -180,7 +180,7 @@ def create_html_report(cfg: Config) -> str:
         perday_rows.append(row)
 
     # Required per-day avg to use full budget by end
-    req_headers = [("Projekt", "Projektname")] + [(mk, f"Erforderlicher Ø/Tag für 100% in {mk}") for mk in all_months]
+    req_headers = [("Projekt", "Projektname")] + [(mk, f"Ø nötig 100% {mk} (h/d)") for mk in all_months]
     req_rows: List[List[str]] = []
     for r in results:
         month_counts: Dict[str, int] = {}
@@ -217,13 +217,10 @@ def create_html_report(cfg: Config) -> str:
             used_by_project_month[(r.name, mk)] = use
             remaining = max(0.0, remaining - use)
 
-    used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzte Stunden in {mk} (mit Limits/Budget)") for mk in all_months]
+    used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzt in {mk} (h)") for mk in all_months]
     used_rows: List[List[str]] = []
-    used_perday_headers = [("Projekt", "Projektname")] + [(mk, f"Ø genutzte h/Arbeitstag in {mk}") for mk in all_months]
-    used_perday_rows: List[List[str]] = []
     for r in results:
         row_used = [r.name]
-        row_used_perday = [r.name]
         # count project workdays per month
         month_counts: Dict[str, int] = {}
         for d in workdays_by_project.get(r.name, []):
@@ -232,12 +229,13 @@ def create_html_report(cfg: Config) -> str:
         for mk in all_months:
             a = assigned.get((r.name, mk), 0.0)
             u = used_by_project_month.get((r.name, mk), 0.0)
-            row_used.append(format_number_de(u, 2))
             days = month_counts.get(mk, 0)
-            avg_u = (u / days) if days > 0 else 0.0
-            row_used_perday.append(format_number_de(avg_u, 2))
+            if days > 0 and u > 0:
+                cell = f"{format_number_de(u,2)} h ({format_number_de(u/days,2)} h/d)"
+            else:
+                cell = f"{format_number_de(u,2)} h"
+            row_used.append(cell)
         used_rows.append(row_used)
-        used_perday_rows.append(row_used_perday)
     
     # Build monthly stacked chart HTML
     proj_names = [r.name for r in results]
@@ -332,7 +330,7 @@ def create_html_report(cfg: Config) -> str:
     monthly_project_chart_html = "".join(["<div class=\"chart\">", "".join(proj_chart_rows), "</div>"])
 
     # Budget consumption rows (reuse used_by_project_month)
-    budget_headers = [("Projekt", "Projektname")] + [(mk, f"Budgetverbrauch in {mk}") for mk in all_months] + [("Restbudget (h)", "Verbleibendes Budget am Projektende"), ("Status", "Budgetstatus zum Projektende")]
+    budget_headers = [("Projekt", "Projektname")] + [(mk, f"Budgetverbrauch {mk} (h)") for mk in all_months] + [("Restbudget (h)", "Verbleibendes Budget am Projektende"), ("Status", "Budgetstatus zum Projektende")]
     budget_rows: List[List[str]] = []
     budget_row_classes: List[str] = []
     for r in results:
@@ -397,7 +395,7 @@ def create_html_report(cfg: Config) -> str:
     new_headers = [
         ("Projekt", "Projektname"),
         ("Zeitraum", "Aktiver Zeitraum innerhalb der Planung"),
-        ("Tage", "Arbeitstage des Projekts im Zeitraum"),
+        ("Tage (d)", "Arbeitstage des Projekts im Zeitraum"),
         ("Kapazität (h)", "Summe zugeteilter Stunden über den Zeitraum"),
         ("Genutzt (h)", "Summe tatsächlich genutzter Stunden (mit Limits/Budget)"),
         ("Ungenutzt (h)", "Summe nicht genutzter Zuteilung (verfallen)"),
@@ -451,8 +449,6 @@ def create_html_report(cfg: Config) -> str:
         req_rows=req_rows,
         used_headers=used_headers,
         used_rows=used_rows,
-        used_perday_headers=used_perday_headers,
-        used_perday_rows=used_perday_rows,
         monthly_stack_chart_html=monthly_stack_chart_html,
         monthly_project_chart_html=monthly_project_chart_html,
         budget_headers=budget_headers,
