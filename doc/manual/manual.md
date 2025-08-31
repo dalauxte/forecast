@@ -1,10 +1,11 @@
-# Manual – Forecast-Planer (CLI)
+# Manual – Forecast-Planer (CLI & HTML)
 
 Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und typische Workflows.
 
 ## Zweck
-- Errechnet pro Projekt die benötigten Ø-Stunden/Tag (100/90/80%), vergleicht mit zugeordneter Kapazität und projiziert den Umsatz.
+- Errechnet pro Projekt die benötigten Ø‑Stunden/Tag (100/90/80%), vergleicht mit zugeordneter Kapazität und projiziert den Umsatz.
 - Berücksichtigt Wochenenden, Feiertage (Niedersachsen), Urlaub, variable Kapazitäten und erwartete Krankheit (Wahrscheinlichkeit pro Arbeitstag).
+ - Exportiert einen ausführlichen HTML‑Bericht; Live‑Simulation im Browser möglich.
 
 ## Voraussetzungen
 - Python 3.11+ (getestet mit 3.13)
@@ -26,12 +27,12 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
 - Danach `config/config.yml` mit eigenen Projekten/Zeiträumen/Kapazitäten befüllen.
 
 ## Aufruf
-- Standard (nutzt `config/config.yml`, schreibt CSV in `output/`):
+- Standard (nutzt `config/config.yml`, schreibt HTML in `output/`):
   - `forecast`
 - Mit explizitem Ausgabeverzeichnis:
   - `forecast --outdir output/runs`
 - Mit expliziter Zieldatei (überschreibt `--outdir`):
-  - `forecast --output output/mein_run.csv`
+  - `forecast --output output/mein_run.html`
 - Alternative Config-Datei:
   - `forecast --config path/to/config.yml`
 - Planungszeitraum überschreiben (statt Werten aus der Config):
@@ -41,13 +42,13 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
 - Rundung (Standard 0.15 h):
   - `forecast --round 0.25`
 
-## Parameter
+## Parameter (CLI)
 - `--config PATH`:
   - Pfad zur YAML-Konfiguration. Optional: Wenn nicht gesetzt, wird `config/config.yml` verwendet.
 - `--outdir DIR`:
-  - Zielordner für CSV. Default: `output`. Datei wird automatisch mit Zeitstempel `forecast_YYYYMMDD_HHMMSS.csv` benannt.
+  - Zielordner für HTML. Default: `output`. Datei wird automatisch mit Zeitstempel `forecast_YYYYMMDD_HHMMSS.html` benannt.
 - `--output FILE`:
-  - Exakter Dateipfad für CSV. Überschreibt `--outdir`.
+  - Exakter Dateipfad für HTML. Überschreibt `--outdir`.
 - `--as-of YYYY-MM-DD`:
   - Stichtag. Alle Tage vor diesem Datum werden ignoriert (Start des Planungszeitraums wird entsprechend nach vorn verschoben).
 - `--planning-start YYYY-MM-DD`, `--planning-end YYYY-MM-DD`:
@@ -55,7 +56,7 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
 - `--round FLOAT`:
   - Rundung der Øh/Tag-Werte auf Vielfache (z. B. `0.25` für 15-Minuten-Takt). Default: `0.15`.
 
-## Output
+## Output (CLI + HTML)
 - CLI-Tabelle inkl.:
   - `Projekt | Zeitraum (Schnitt) | Verbl. Tage | Kapazität (h) | ØKap/Tag | Øh/Tag (100/90/80) | Util (100/90/80) | Umsatz (100/90/80)`
   - Util (Auslastung):
@@ -66,23 +67,24 @@ Dieses Dokument erklärt die Nutzung des CLI-Tools, akzeptierte Parameter und ty
     - Beispiel:
       - Gegeben: `ØKap/Tag = 6,00`, `Øh/Tag 100% = 5,00`, `Øh/Tag 90% = 4,50`, `Øh/Tag 80% = 4,00`.
       - Dann: `Util 100% = 5,00 / 6,00 = 0,83`, `Util 90% = 4,50 / 6,00 = 0,75`, `Util 80% = 4,00 / 6,00 = 0,67`.
-- CSV-Export:
+- HTML‑Export:
   - Wird immer geschrieben.
-  - Standard: `output/forecast_YYYYMMDD_HHMMSS.csv` (anpassbar per `--outdir`/`--output`).
-  - Enthält eine „GESAMT“-Zeile mit Summen für „Kapazität (h)“ und „Umsatz (100/90/80)“.
+  - Standard: `output/forecast_YYYYMMDD_HHMMSS.html` (anpassbar per `--outdir`/`--output`).
+  - Enthält Übersicht (KPIs), Projekt‑Tabellen und Diagramme (gestapelte Monatsnutzung; je Projekt/Monat „genutzt vs. verfügbar am Monatsanfang“).
+  - In „Genutzte Stunden je Projekt (Monat)“ wird zusätzlich „(Ø h/d)“ ausgewiesen.
 - Hinweise/Warnungen:
   - Projekte ohne verbleibende Arbeitstage werden gelistet (ignoriert).
   - Warnung, wenn Ziel (100/90/80) mehr Øh/Tag erfordert als zugeordnete ØKap/Tag.
 
 ## Datenformat (Konfiguration)
 - Siehe `doc/manual/config.sample.yml` und `doc/manual/README.md`.
-- Kernelemente: `settings`, `capacity` (Wochentage/Intervalle), `calendar` (Urlaub/Overrides), `sickness` (Wahrscheinlichkeit), `projects` (Restbudget, Stundensatz, Monatsgewichte).
+- Kernelemente: `settings`, `capacity` (Wochentage/Intervalle), `calendar` (Urlaub/Overrides), `sickness` (Wahrscheinlichkeit), `projects` (Restbudget, Stundensatz, Monatsgewichte, optionale `limits_by_month`).
 
 ## Beispiele
 - Einfacher Lauf mit Default-Konfig/Output:
   - `forecast`
-- Individuelle Datei im Standard-Output-Ordner:
-  - `forecast --output output/forecast_meinteam.csv`
+- Individuelle Datei im Standard‑Output‑Ordner:
+  - `forecast --output output/forecast_meinteam.html`
 - Lauf mit Stichtag und engerem Zeitraum:
   - `forecast --as-of 2025-03-10 --planning-start 2025-03-01 --planning-end 2025-04-30`
 - Runde auf 0.25 h:
@@ -130,6 +132,12 @@ Siehe `doc/manual/bundling.md` für Details. Kurzfassung:
 ### Alternative: Ausführung ohne Binary
 - Direkt aus dem Source (ohne Installation):
   - `PYTHONPATH=src python3 -m forecast.cli --config input/20250901_forecast_config.yml --outdir out`
+
+## Live‑Simulation (Browser)
+- Start: `PYTHONPATH=src python3 -m forecast.server`
+- Aufruf: `http://127.0.0.1:8765`
+- Links YAML‑Eingabe, rechts HTML‑Report (Auto‑Render oder Button „Neu rendern“)
+- Split: Drag‑Handle (20–80%), Alt+←/→ für 1‑%‑Schritte, „Reset“ auf 35%/65%
 - Über Installation (legt ein `forecast`-Kommando in der venv an):
   - `python3 -m venv .venv && source .venv/bin/activate`
   - `pip install -e .`
