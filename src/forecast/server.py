@@ -65,7 +65,8 @@ INDEX_HTML = """<!DOCTYPE html>
       localStorage.setItem('splitLeft', val);
     }
     function highlightYAML(text) {
-      let s = text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+      // Escape HTML with broad browser support (avoid replaceAll)
+      let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       s = s.replace(/(^|\n)([ \t]*#.*)/g, (m, p1, p2) => p1 + '<span class=\\"cmt\\">' + p2 + '</span>');
       s = s.replace(/(\"[^\"]*\"|\'[^\']*\')/g, '<span class=\\"str\\">$1</span>');
       s = s.replace(/(^|\n)([ \t]*)([A-Za-z0-9_\-\.]+)(\s*):/g, (m, p1, p2, p3, p4) => p1 + p2 + '<span class=\\"key\\">' + p3 + '</span>' + p4 + ':');
