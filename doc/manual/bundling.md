@@ -47,3 +47,10 @@ cp dist/forecast ~/bin/forecast   # oder in dein Arbeitsverzeichnis
 - Architektur: Das Binary erbt die Architektur deines Python-Interpreters. Für Apple Silicon also mit arm64-Python bauen (kein Cross-Compile).
 - Feiertage: Das Paket `holidays` wird in das Binary gebündelt, wenn es beim Build installiert ist.
 - Clean: `make bundle-clean` bereinigt `build/`, `dist/` und `forecast.spec`.
+
+## Troubleshooting (Ausführung)
+- „command not found: forecast“: Im aktuellen Ordner mit `./forecast` starten oder das Binary in einen Ordner legen, der in `PATH` liegt.
+- „permission denied“: `chmod +x forecast` ausführen.
+- macOS blockiert Start: `xattr -d com.apple.quarantine forecast` (Quarantäne-Attribut entfernen).
+- Falscher Binary-Typ: `file forecast` prüfen. Erwartet: „Mach-O 64-bit arm64“. Bei „ELF …“ wurde auf Linux gebaut → auf macOS neu bauen (`make bundle-macos`).
+- Falsche/absolute Pfade: Keine führenden `/` verwenden, sofern nicht beabsichtigt. Beispiel: `input/...` statt `/input/...`.

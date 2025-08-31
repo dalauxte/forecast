@@ -116,3 +116,21 @@ Siehe `doc/manual/bundling.md` für Details. Kurzfassung:
 1) `python -m pip install -e . && python -m pip install pyinstaller`
 2) `make bundle-macos`
 3) `cp dist/forecast <dein Arbeitsverzeichnis>` und dort ausführen.
+
+### Ausführen des Binaries und Fehlerbehebung
+- Binary lokal ausführen: `./forecast ...` (ohne `./` wird der aktuelle Ordner nicht durchsucht und es kommt zu „command not found“).
+- Datei ausführbar machen (falls nötig): `chmod +x forecast`.
+- macOS-Quarantäne entfernen (aus dem Internet geladen/kopiert): `xattr -d com.apple.quarantine forecast`.
+- Richtige Architektur prüfen: `file forecast` sollte „Mach-O 64-bit arm64“ zeigen. Wenn „ELF“ erscheint, ist es ein Linux-Build → auf dem Mac neu bauen (`make bundle-macos`).
+- Pfade relativ statt absolut: `input/...` statt `/input/...` verwenden, sofern kein Ordner wirklich im Root-Verzeichnis existiert.
+- Beispiele:
+  - `./forecast --config input/20250901_forecast_config.yml --outdir out`
+  - `./forecast --output out/run.csv --as-of 2025-03-10`
+
+### Alternative: Ausführung ohne Binary
+- Direkt aus dem Source (ohne Installation):
+  - `PYTHONPATH=src python3 -m forecast.cli --config input/20250901_forecast_config.yml --outdir out`
+- Über Installation (legt ein `forecast`-Kommando in der venv an):
+  - `python3 -m venv .venv && source .venv/bin/activate`
+  - `pip install -e .`
+  - `forecast --config input/20250901_forecast_config.yml --outdir out`
