@@ -200,10 +200,8 @@ def create_html_report(cfg: Config) -> str:
             row.append(format_number_de(need_avg, 2))
         req_rows.append(row)
 
-    # Used vs unused considering limits and remaining budget
+    # Used per month considering monthly limits and total budget (sequential)
     used_by_project_month: Dict[Tuple[str, str], float] = {}
-    # Allowed by configuration per month (ignores total budget): min(assigned, limit)
-    allowed_by_config_pm: Dict[Tuple[str, str], float] = {}
     for r in results:
         remaining = float(r.rest_budget_hours or 0.0)
         # find original project to read limits
@@ -216,10 +214,7 @@ def create_html_report(cfg: Config) -> str:
             use = min(allow, remaining)
             if use < 0:
                 use = 0.0
-            if allow < 0:
-                allow = 0.0
             used_by_project_month[(r.name, mk)] = use
-            allowed_by_config_pm[(r.name, mk)] = allow
             remaining = max(0.0, remaining - use)
 
     used_headers = [("Projekt", "Projektname")] + [(mk, f"Genutzte Stunden in {mk} (mit Limits/Budget)") for mk in all_months]
@@ -265,27 +260,41 @@ def create_html_report(cfg: Config) -> str:
         "</div>",
     ])
 
-    # Second chart: per project within each month – used vs available (by config)
+    # Second chart: per project within each month – used vs available (remaining budget at month start)
     proj_chart_rows = []
     for mk in all_months:
-        # scale bars relative to max allowed in this month to improve comparability
-        max_allowed = max(allowed_by_config_pm.get((name, mk), 0.0) for name in proj_names) or 1.0
+        # compute remaining budget per project at month start
+        remaining_at_start = {}
+        for name in proj_names:
+            # recompute sequentially for this project up to this month
+            rproj = next((rr for rr in results if rr.name == name), None)
+            rem = float(rproj.rest_budget_hours if rproj else 0.0)
+            for mk2 in all_months:
+                if mk2 == mk:
+                    break
+                rem = max(0.0, rem - float(used_by_project_month.get((name, mk2), 0.0)))
+            remaining_at_start[name] = rem
+        max_avail = max(remaining_at_start.values()) if remaining_at_start else 0.0
+        if max_avail <= 0:
+            max_avail = 1.0
         # add a month header row
         proj_chart_rows.append(f"<div class=\"row\"><div class=\"label\"><strong>{_html_escape(mk)}</strong></div><div class=\"bar\"></div><div class=\"label\"></div></div>")
         for i, name in enumerate(proj_names):
-            allow = float(allowed_by_config_pm.get((name, mk), 0.0))
+            avail_total = float(remaining_at_start.get(name, 0.0))
             used = float(used_by_project_month.get((name, mk), 0.0))
-            avail = max(0.0, allow - used)
-            total_w = 0 if max_allowed <= 0 else max(0.0, (allow / max_allowed) * 100.0)
-            used_w = 0 if max_allowed <= 0 else max(0.0, (used / max_allowed) * 100.0)
+            avail_after = max(0.0, avail_total - used)
+            total_w = max(0.0, (avail_total / max_avail) * 100.0)
+            used_w = max(0.0, (used / max_avail) * 100.0)
             avail_w = max(0.0, total_w - used_w)
-            seg_used = f"<div class=\"seg\" title=\"{_html_escape(name)} genutzt: {format_number_de(used,2)} h ({(used/allow*100) if allow>0 else 0:.1f}%)\" style=\"width:{used_w:.4f}%;background:{color_for(i)}\"></div>"
+            used_pct = (used / avail_total * 100.0) if avail_total > 0 else 0.0
+            avail_pct = (avail_after / avail_total * 100.0) if avail_total > 0 else 0.0
+            seg_used = f"<div class=\"seg\" title=\"{_html_escape(name)} genutzt: {format_number_de(used,2)} h ({used_pct:.1f}%)\" style=\"width:{used_w:.4f}%;background:{color_for(i)}\"></div>"
             # lighter color for available
             hue = (i * 67) % 360
-            seg_avail = f"<div class=\"seg\" title=\"{_html_escape(name)} verfügbar: {format_number_de(avail,2)} h ({(avail/allow*100) if allow>0 else 0:.1f}%)\" style=\"width:{avail_w:.4f}%;background:hsl({hue}, 45%, 85%)\"></div>"
+            seg_avail = f"<div class=\"seg\" title=\"{_html_escape(name)} verfügbar: {format_number_de(avail_after,2)} h ({avail_pct:.1f}%)\" style=\"width:{avail_w:.4f}%;background:hsl({hue}, 45%, 85%)\"></div>"
             bar = f"<div class=\"bar\">{seg_used}{seg_avail}</div>"
             label_left = f"{_html_escape(name)}"
-            label_right = f"{format_number_de(used,2)} / {format_number_de(allow,2)} h"
+            label_right = f"{format_number_de(used,2)} / {format_number_de(avail_total,2)} h"
             proj_chart_rows.append(f"<div class=\"row\"><div class=\"label\">{label_left}</div>{bar}<div class=\"label\">{label_right}</div></div>")
     monthly_project_chart_html = "".join(["<div class=\"chart\">", "".join(proj_chart_rows), "</div>"])
 
